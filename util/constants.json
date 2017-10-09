@@ -1,0 +1,14 @@
+{
+  "CLIENT_ID_TOPIC_SPLITTER": "@",
+  "DEV": "dev",
+  "MQTT": {
+      "PORT": 1883
+  },
+  "WS": {
+    "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket"
+  },
+  "TOPICS": {
+      "TOKEN": "token",
+      "DH_AUTHENTICATION": "dh/authentication"
+  }
+}
