@@ -2,13 +2,27 @@
   "CLIENT_ID_TOPIC_SPLITTER": "@",
   "DEV": "dev",
   "MQTT": {
-      "PORT": 1883
+    "PORT": 1883,
+    "WILDCARDS": [
+      "+",
+      "#"
+    ]
   },
   "WS": {
-    "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket"
+    "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket",
+    "ACTIONS": {
+      "AUTHENTICATE": "authenticate",
+      "TOKEN": "token",
+      "NOTIFICATION_SUBSCRIBE": "notification/subscribe",
+      "NOTIFICATION_UNSUBSCRIBE": "notification/unsubscribe",
+      "NOTIFICATION_INSERT": "notification/insert",
+      "COMMAND_SUBSCRIBE": "command/subscribe",
+      "COMMAND_UNSUBSCRIBE": "command/unsubscribe",
+      "COMMAND_INSERT": "command/insert"
+    }
   },
   "TOPICS": {
-      "TOKEN": "token",
-      "DH_AUTHENTICATION": "dh/authentication"
+    "TOKEN": "token",
+    "DH_AUTHENTICATION": "dh/authentication"
   }
 }
