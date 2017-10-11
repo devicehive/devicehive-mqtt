@@ -1,5 +1,7 @@
 const util = require('util');
 const CONST = require('./constants.json');
+const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
+const TopicStructure = require('../lib/TopicStructure.js');
 
 /**
  * Device Hive Util class
@@ -7,12 +9,73 @@ const CONST = require('./constants.json');
 class DeviceHiveUtils {
 
     /**
+     * Check for same topic root
+     * @param topic1
+     * @param topic2
+     * @returns {boolean}
+     */
+    static isSameTopicRoot (topic1, topic2) {
+        let result = true;
+        let splittedTopic1 = topic1.split('/');
+        let splittedTopic2 = topic2.split('/');
+        let smallestSize = splittedTopic1.length < splittedTopic2.length ?
+            splittedTopic1.length :
+            splittedTopic2.length;
+
+        for (let counter = 0; counter < smallestSize; counter++) {
+            if (splittedTopic1[counter] !== splittedTopic2[counter] &&
+                !(CONST.MQTT.WILDCARDS.includes(splittedTopic1[counter]) ||
+                CONST.MQTT.WILDCARDS.includes(splittedTopic2[counter]))) {
+                result = false;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Check if the topicToCheck is less global than the topicToCompare
+     * @param topicToCheck
+     * @param topicToCompare
+     * @returns {boolean}
+     */
+    static isLessGlobalTopic (topicToCheck, topicToCompare) {
+        let result = false;
+        let topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
+
+        if (topicToCheckPatterns.includes(topicToCompare)) {
+            result = true;
+        }
+
+        return result;
+    }
+
+    /**
+     * Check if the topicToCheck is more global than the topicToCompare
+     * @param topicToCheck
+     * @param topicToCompare
+     * @returns {boolean}
+     */
+    static isMoreGlobalTopic (topicToCheck, topicToCompare) {
+        let result = false;
+        let topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
+
+        if (topicToComparePatterns.includes(topicToCheck)) {
+            result = true;
+        }
+
+        return result;
+    }
+
+    /**
      * Get WS action for topic subscription
      * @param topicStructure
      * @returns {string}
      */
-    static getTopicSubscribeRequestAction (topicStructure) {
+    static getTopicSubscribeRequestAction (topic) {
         let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
@@ -28,8 +91,9 @@ class DeviceHiveUtils {
      * @param topicStructure
      * @returns {string}
      */
-    static getTopicUnsubscribeRequestAction (topicStructure) {
+    static getTopicUnsubscribeRequestAction (topic) {
         let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
@@ -45,8 +109,9 @@ class DeviceHiveUtils {
      * @param topicStructure
      * @returns {string}
      */
-    static getTopicResponseAction (topicStructure) {
+    static getTopicResponseAction (topic) {
         let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
