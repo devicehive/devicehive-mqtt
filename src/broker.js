@@ -30,7 +30,7 @@ wsFactory.on(`globalMessage`, (message, clientId) => {
             if (mostGlobalTopic === topic) {
                 (subscriptionManager.getSubscriptionExecutor(topic, () => {
                     server.publish({
-                        topic: TopicStructure.toTopic(messageData),
+                        topic: TopicStructure.toTopicString(messageData),
                         payload: message.data
                     });
                 }))();
@@ -176,16 +176,9 @@ function hasMoreGlobalTopicAttempts(clientId, topic) {
  * @param topic
  * @returns {Promise.<Object>}
  */
-function subscribe(clientId, topic) {
-    const topicStructure = new TopicStructure(topic);
-
+function subscribe (clientId, topic) {
     return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send({
-            action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getNetwork(),
-            deviceIds: topicStructure.getDevice(),
-            names: topicStructure.getName()
-        }));
+        .then((wSocket) => wSocket.send(DeviceHiveUtils.createSubscriptionDataObject(topic)));
 }
 
 /**
@@ -196,7 +189,7 @@ function subscribe(clientId, topic) {
  * @param subscriptionId
  * @returns {Promise.<Object>}
  */
-function unsubscribe(clientId, topic, subscriptionId) {
+function unsubscribe (clientId, topic, subscriptionId) {
     return wsFactory.getSocket(clientId)
         .then((wSocket) => wSocket.send({
             action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
@@ -210,7 +203,7 @@ function unsubscribe(clientId, topic, subscriptionId) {
  * @param clientId
  * @param topic
  */
-function unsubscribeFromLessGlobalTopics(clientId, topic) {
+function unsubscribeFromLessGlobalTopics (clientId, topic) {
     subscriptionManager.getSubjects(clientId)
         .filter((subscription) => DeviceHiveUtils.isMoreGlobalTopic(topic, subscription))
         .forEach((topicToUnsubscribe) => {
@@ -231,7 +224,7 @@ function unsubscribeFromLessGlobalTopics(clientId, topic) {
  * @param topic
  * @returns {boolean}
  */
-function isSubscriptionActual(clientId, topic) {
+function isSubscriptionActual (clientId, topic) {
     return subscriptionManager.hasSubscriptionAttempt(clientId, topic);
 }
 
