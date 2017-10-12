@@ -9,6 +9,27 @@ const TopicStructure = require('../lib/TopicStructure.js');
 class DeviceHiveUtils {
 
     /**
+     * Create subscription object based on topic parameter
+     * @param topic
+     * @returns {Object}
+     */
+    static createSubscriptionDataObject (topic) {
+        let topicStructure = new TopicStructure(topic);
+        let result = {
+            action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
+            networkIds: topicStructure.getNetwork(),
+            deviceIds: topicStructure.getDevice(),
+            names: topicStructure.getName()
+        };
+
+        if (topicStructure.isCommandUpdate()) {
+            result.returnUpdatedCommands = true
+        }
+
+        return result;
+    }
+
+    /**
      * Check for same topic root
      * @param topic1
      * @param topic2
@@ -70,7 +91,7 @@ class DeviceHiveUtils {
 
     /**
      * Get WS action for topic subscription
-     * @param topicStructure
+     * @param topic
      * @returns {string}
      */
     static getTopicSubscribeRequestAction (topic) {
@@ -79,7 +100,7 @@ class DeviceHiveUtils {
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
-        } else if (topicStructure.isCommand()) {
+        } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
             action = CONST.WS.ACTIONS.COMMAND_SUBSCRIBE;
         }
 
@@ -88,7 +109,7 @@ class DeviceHiveUtils {
 
     /**
      * Get WS action for topic unsubscription
-     * @param topicStructure
+     * @param topic
      * @returns {string}
      */
     static getTopicUnsubscribeRequestAction (topic) {
@@ -97,7 +118,7 @@ class DeviceHiveUtils {
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
-        } else if (topicStructure.isCommand()) {
+        } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
             action = CONST.WS.ACTIONS.COMMAND_UNSUBSCRIBE;
         }
 
@@ -106,7 +127,7 @@ class DeviceHiveUtils {
 
     /**
      * Get WS response action for topic
-     * @param topicStructure
+     * @param topic
      * @returns {string}
      */
     static getTopicResponseAction (topic) {
@@ -115,7 +136,9 @@ class DeviceHiveUtils {
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
-        } else if (topicStructure.isCommand()) {
+        } else if (topicStructure.isCommandUpdate()) {
+            action = CONST.WS.ACTIONS.COMMAND_UPDATE;
+        } else if (topicStructure.isCommandInsert()) {
             action = CONST.WS.ACTIONS.COMMAND_INSERT;
         }
 

@@ -30,7 +30,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
             if (mostGlobalTopic === topic) {
                 (subscriptionManager.getSubscriptionExecutor(topic, () => {
                     server.publish({
-                        topic: TopicStructure.toTopic(data),
+                        topic: TopicStructure.toTopicString(data),
                         payload: message.data
                     });
                 }))();
@@ -177,15 +177,8 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function subscribe (clientId, topic) {
-    let topicStructure = new TopicStructure(topic);
-
     return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send({
-            action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getNetwork(),
-            deviceIds: topicStructure.getDevice(),
-            names: topicStructure.getName()
-        }));
+        .then((wSocket) => wSocket.send(DeviceHiveUtils.createSubscriptionDataObject(topic)));
 }
 
 /**
