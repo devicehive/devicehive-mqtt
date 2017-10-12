@@ -1,5 +1,3 @@
-require('events').EventEmitter.prototype._maxListeners = 20;
-
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
 const WebSocketFactory = require('../lib/WebSocketFactory.js');
@@ -32,7 +30,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
             if (mostGlobalTopic === topic) {
                 (subscriptionManager.getSubscriptionExecutor(topic, () => {
                     server.publish({
-                        topic: transformNotificationDataToTopic(data), // TODO create topic from payload
+                        topic: TopicStructure.toTopic(data),
                         payload: message.data
                     });
                 }))();
@@ -48,9 +46,9 @@ server.authenticate = function (client, username, password, callback) {
                 .then((wSocket) => {
                     wSocket.createTokenByLoginInfo(username, password.toString())
                         .then(({accessToken, refreshToken}) => wSocket.authenticate(accessToken))
-                        .then(() => callback(null, true))
-                        .catch((err) => callback(null, false));
-                })
+                        .then(() => process.nextTick(() => callback(null, true)))
+                        .catch((err) => process.nextTick(() => callback(null, false)));
+                });
         } else {
             callback(null, false);
         }
@@ -78,11 +76,11 @@ server.authorizeSubscribe = function (client, topic, callback) {
                             callback(null, true);
                         } else {
                             unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
-                                .then(() => callback(null, false))
-                                .catch((err) => console.warn(err));
+                                .then(() => process.nextTick(() => callback(null, false)))
+                                .catch((err) => process.nextTick(() => console.warn(err)));
                         }
                     })
-                    .catch(() => callback(null, false));
+                    .catch(() => process.nextTick(() => callback(null, false)));
             } else {
                 callback(null, true);
             }
@@ -102,7 +100,6 @@ server.on('ready', () => {
 
 server.on('clientDisconnected', (client) => {
     wsFactory.removeSocket(client.id)
-        //.then(() => subscriptionManager.removeSubscriber(client.id))
         .catch((err) => console.warn(err));
 });
 
@@ -145,7 +142,7 @@ server.on('unsubscribed', (topic, client) => {
 
 
 /**
- *
+ * Part of broker flow. Check that the topic is forbidden to subscribe
  * @param topic
  * @returns {boolean}
  */
@@ -154,7 +151,7 @@ function isTopicForbidden (topic) {
 }
 
 /**
- *
+ * Part of broker flow. Check that the topic concerns to DeviceHive
  * @param topic
  * @returns {boolean}
  */
@@ -163,7 +160,7 @@ function isDeviceHiveTopic (topic) {
 }
 
 /**
- *
+ * Part of broker flow. Check that there are has a more global topic then "topic" parameter
  * @param clientId
  * @param topic
  * @returns {boolean}
@@ -174,7 +171,7 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
 }
 
 /**
- *
+ * Part of broker flow. Subscribe client with "clientId" to "topic" via WS
  * @param clientId
  * @param topic
  * @returns {Promise.<Object>}
@@ -192,7 +189,8 @@ function subscribe (clientId, topic) {
 }
 
 /**
- *
+ * Part of broker flow. Unsubscribe client with "clientId" from "topic" with
+ * mentioned "subscriptionId" via WS
  * @param clientId
  * @param topic
  * @param subscriptionId
@@ -207,7 +205,8 @@ function unsubscribe (clientId, topic, subscriptionId) {
 }
 
 /**
- *
+ * Part of broker flow. Unsubscribe client with "clientId" from topics
+ * that are less global then "topic"
  * @param clientId
  * @param topic
  */
@@ -226,7 +225,8 @@ function unsubscribeFromLessGlobalTopics (clientId, topic) {
 }
 
 /**
- *
+ * Part of broker flow. Check if the client with "clientId" is
+ * still subscribed to the "topic"
  * @param clientId
  * @param topic
  * @returns {boolean}
@@ -236,7 +236,8 @@ function isSubscriptionActual (clientId, topic) {
 }
 
 /**
- *
+ * Part of broker flow. Subscribe client with "clientId" to the topic
+ * that is more global then "topic"
  * @param clientId
  * @param topic
  */
@@ -252,14 +253,4 @@ function subscribeToNextMostGlobalTopic (clientId, topic) {
                 nextMostGlobalTopic, clientId, subscriptionResponse.subscriptionId))
             .catch((err) => console.warn(err));
     }
-}
-
-// TODO move it
-function transformNotificationDataToTopic (data) {
-    let action = data.action === "notification/insert" ? "notification" : "command";
-    let network = "+";
-    let device = data.notification.deviceId;
-    let name = data.notification.notification;
-
-    return ['dh', action, network, device, name].join("/");
 }
