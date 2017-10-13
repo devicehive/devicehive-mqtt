@@ -65,13 +65,13 @@ server.authorizeForward = function (client, packet, callback) {
 
 server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
-        if (isDeviceHiveTopic(topic)) {
+        if (isDeviceHiveSubscriptionTopic(topic)) {
             if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
                 subscribe(client.id, topic)
                     .then((subscriptionResponse) => {
-                        unsubscribeFromLessGlobalTopics(client.id, topic);
-
                         if (isSubscriptionActual(client.id, topic)) {
+                            unsubscribeFromLessGlobalTopics(client.id, topic);
+
                             subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
                             callback(null, true);
                         } else {
@@ -123,7 +123,7 @@ server.on(`published`, (packet, client) => {
 });
 
 server.on(`unsubscribed`, (topic, client) => {
-    if (isDeviceHiveTopic(topic)) {
+    if (isDeviceHiveSubscriptionTopic(topic)) {
         const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
         subscriptionManager.removeSubscriptionAttempt(client.id, topic);
@@ -146,7 +146,7 @@ server.on(`unsubscribed`, (topic, client) => {
  * @param topic
  * @returns {boolean}
  */
-function isTopicForbidden(topic) {
+function isTopicForbidden (topic) {
     return FORBIDDEN_TO_SUBSCRIBE_TOPICS.includes(topic);
 }
 
@@ -155,8 +155,10 @@ function isTopicForbidden(topic) {
  * @param topic
  * @returns {boolean}
  */
-function isDeviceHiveTopic(topic) {
-    return (new TopicStructure(topic)).isDH();
+function isDeviceHiveSubscriptionTopic (topic) {
+    const topicStructure = new TopicStructure(topic);
+    return topicStructure.isDH() &&
+        (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
 }
 
 /**
@@ -165,7 +167,7 @@ function isDeviceHiveTopic(topic) {
  * @param topic
  * @returns {boolean}
  */
-function hasMoreGlobalTopicAttempts(clientId, topic) {
+function hasMoreGlobalTopicAttempts (clientId, topic) {
     return subscriptionManager.getSubscriptionAttempts(clientId)
         .some((subjectAttempt) => DeviceHiveUtils.isMoreGlobalTopic(subjectAttempt, topic));
 }
