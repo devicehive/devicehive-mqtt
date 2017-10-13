@@ -65,13 +65,13 @@ server.authorizeForward = function (client, packet, callback) {
 
 server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
-        if (isDeviceHiveTopic(topic)) {
+        if (isDeviceHiveSubscriptionTopic(topic)) {
             if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
                 subscribe(client.id, topic)
                     .then((subscriptionResponse) => {
-                        unsubscribeFromLessGlobalTopics(client.id, topic);
-
                         if (isSubscriptionActual(client.id, topic)) {
+                            unsubscribeFromLessGlobalTopics(client.id, topic);
+
                             subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
                             callback(null, true);
                         } else {
@@ -123,7 +123,7 @@ server.on('published', (packet, client) => {
 });
 
 server.on('unsubscribed', (topic, client) => {
-    if (isDeviceHiveTopic(topic)) {
+    if (isDeviceHiveSubscriptionTopic(topic)) {
         let subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
         subscriptionManager.removeSubscriptionAttempt(client.id, topic);
@@ -155,8 +155,10 @@ function isTopicForbidden (topic) {
  * @param topic
  * @returns {boolean}
  */
-function isDeviceHiveTopic (topic) {
-    return (new TopicStructure(topic)).isDH();
+function isDeviceHiveSubscriptionTopic (topic) {
+    let topicStructure = new TopicStructure(topic);
+    return topicStructure.isDH() &&
+        (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
 }
 
 /**
