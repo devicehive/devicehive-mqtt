@@ -1,7 +1,7 @@
-const util = require(`util`);
-const CONST = require(`./constants.json`);
-const moscaUtils = require(`../node_modules/mosca/lib/persistence/utils.js`);
-const TopicStructure = require(`../lib/TopicStructure.js`);
+const util = require('util');
+const CONST = require('./constants.json');
+const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
+const TopicStructure = require('../lib/TopicStructure.js');
 
 /**
  * Device Hive Util class
@@ -14,10 +14,10 @@ class DeviceHiveUtils {
      * @returns {Object}
      */
     static createSubscriptionDataObject (topic) {
-        const topicStructure = new TopicStructure(topic);
-        const result = {
+        let topicStructure = new TopicStructure(topic);
+        let result = {
             action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getNetwork(),
+            networkIds: topicStructure.getDevice().length > 0 ? [] :topicStructure.getNetwork(),
             deviceIds: topicStructure.getDevice(),
             names: topicStructure.getName()
         };
@@ -37,9 +37,9 @@ class DeviceHiveUtils {
      */
     static isSameTopicRoot (topic1, topic2) {
         let result = true;
-        const splittedTopic1 = topic1.split(`/`);
-        const splittedTopic2 = topic2.split(`/`);
-        const smallestSize = splittedTopic1.length < splittedTopic2.length ?
+        let splittedTopic1 = topic1.split('/');
+        let splittedTopic2 = topic2.split('/');
+        let smallestSize = splittedTopic1.length < splittedTopic2.length ?
             splittedTopic1.length :
             splittedTopic2.length;
 
@@ -63,7 +63,7 @@ class DeviceHiveUtils {
      */
     static isLessGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        const topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
+        let topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
 
         if (topicToCheckPatterns.includes(topicToCompare)) {
             result = true;
@@ -80,7 +80,7 @@ class DeviceHiveUtils {
      */
     static isMoreGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        const topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
+        let topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
 
         if (topicToComparePatterns.includes(topicToCheck)) {
             result = true;
@@ -95,8 +95,8 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicSubscribeRequestAction (topic) {
-        let action = ``;
-        const topicStructure = new TopicStructure(topic);
+        let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
@@ -113,8 +113,8 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicUnsubscribeRequestAction (topic) {
-        let action = ``;
-        const topicStructure = new TopicStructure(topic);
+        let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
@@ -131,8 +131,8 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicResponseAction (topic) {
-        let action = ``;
-        const topicStructure = new TopicStructure(topic);
+        let action = '';
+        let topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
@@ -144,26 +144,6 @@ class DeviceHiveUtils {
 
         return action;
     }
-
-    /**
-     * Append client id to topic base
-     * @param topic
-     * @param client
-     * @returns {String}
-     */
-    static getClientTopic (topic, client) {
-        return util.format(`%s%s%s`, topic, CONST.CLIENT_ID_TOPIC_SPLITTER, client.id);
-    }
-
-    /**
-     * Extract client id from client topic
-     * @param topic
-     * @returns {String}
-     */
-    static getClientFromTopic (topic) {
-        return topic.split(CONST.CLIENT_ID_TOPIC_SPLITTER)[1];
-    }
-
 }
 
 module.exports = DeviceHiveUtils;

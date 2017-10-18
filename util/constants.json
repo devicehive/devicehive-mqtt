@@ -23,13 +23,20 @@
     }
   },
   "TOPICS": {
-    "TOKEN": "token",
-    "DH_AUTHENTICATION": "dh/authentication",
+    "TOKEN": "dh/request/token",
+    "AUTHENTICATION": "dh/request/authentication",
     "PARTS": {
       "DH": "dh",
+      "RESPONSE": "response",
+      "REQUEST": "request",
       "NOTIFICATION": "notification",
       "COMMAND": "command",
       "COMMAND_UPDATE": "command_update"
+    },
+    "FORBIDDEN": {
+      "START_WITH": [
+        "dh/request"
+      ]
     }
   }
 }
