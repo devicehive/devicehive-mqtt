@@ -14,8 +14,8 @@ class DeviceHiveUtils {
      * @returns {Object}
      */
     static createSubscriptionDataObject (topic) {
-        let topicStructure = new TopicStructure(topic);
-        let result = {
+        const topicStructure = new TopicStructure(topic);
+        const result = {
             action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
             networkIds: topicStructure.getNetwork(),
             deviceIds: topicStructure.getDevice(),
