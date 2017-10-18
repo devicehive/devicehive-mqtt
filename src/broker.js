@@ -47,7 +47,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
     }
 });
 
-function authenticate (client, username, password, callback) {
+server.authenticate = function (client, username, password, callback) {
     if (!wsFactory.hasSocket(client.id)) {
         if (username && password) {
             wsFactory.getSocket(client.id)
@@ -65,19 +65,19 @@ function authenticate (client, username, password, callback) {
     }
 }
 
-function authorizePublish (client, topic, payload, callback) {
+server.authorizePublish = function (client, topic, payload, callback) {
     let topicStructure = new TopicStructure(topic);
 
     callback(null, topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true);
 }
 
-function authorizeForward (client, packet, callback) {
+server.authorizeForward = function (client, packet, callback) {
     let topicStructure = new TopicStructure(packet.topic);
 
     callback(null, topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true);
 }
 
-function authorizeSubscribe (client, topic, callback) {
+server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
         if (isDeviceHiveEventSubscriptionTopic(topic)) {
             if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
@@ -112,11 +112,6 @@ function authorizeSubscribe (client, topic, callback) {
 }
 
 server.on('ready', () => {
-    server.authenticate = authenticate;
-    server.authorizePublish = authorizePublish;
-    server.authorizeSubscribe = authorizeSubscribe;
-    server.authorizeForward = authorizeForward;
-
     console.log('MQTT Broker has been started');
 });
 
