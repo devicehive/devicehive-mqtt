@@ -1,7 +1,6 @@
-const util = require(`util`);
-const CONST = require(`./constants.json`);
-const moscaUtils = require(`../node_modules/mosca/lib/persistence/utils.js`);
-const TopicStructure = require(`../lib/TopicStructure.js`);
+const CONST = require('./constants.json');
+const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
+const TopicStructure = require('../lib/TopicStructure.js');
 
 /**
  * Device Hive Util class
@@ -17,7 +16,7 @@ class DeviceHiveUtils {
         const topicStructure = new TopicStructure(topic);
         const result = {
             action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getNetwork(),
+            networkIds: topicStructure.getDevice().length > 0 ? [] :topicStructure.getNetwork(),
             deviceIds: topicStructure.getDevice(),
             names: topicStructure.getName()
         };
@@ -37,8 +36,8 @@ class DeviceHiveUtils {
      */
     static isSameTopicRoot (topic1, topic2) {
         let result = true;
-        const splittedTopic1 = topic1.split(`/`);
-        const splittedTopic2 = topic2.split(`/`);
+        const splittedTopic1 = topic1.split('/');
+        const splittedTopic2 = topic2.split('/');
         const smallestSize = splittedTopic1.length < splittedTopic2.length ?
             splittedTopic1.length :
             splittedTopic2.length;
@@ -95,7 +94,7 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicSubscribeRequestAction (topic) {
-        let action = ``;
+        let action = '';
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
@@ -113,7 +112,7 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicUnsubscribeRequestAction (topic) {
-        let action = ``;
+        let action = '';
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
@@ -131,7 +130,7 @@ class DeviceHiveUtils {
      * @returns {string}
      */
     static getTopicResponseAction (topic) {
-        let action = ``;
+        let action = '';
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
@@ -144,26 +143,6 @@ class DeviceHiveUtils {
 
         return action;
     }
-
-    /**
-     * Append client id to topic base
-     * @param topic
-     * @param client
-     * @returns {String}
-     */
-    static getClientTopic (topic, client) {
-        return util.format(`%s%s%s`, topic, CONST.CLIENT_ID_TOPIC_SPLITTER, client.id);
-    }
-
-    /**
-     * Extract client id from client topic
-     * @param topic
-     * @returns {String}
-     */
-    static getClientFromTopic (topic) {
-        return topic.split(CONST.CLIENT_ID_TOPIC_SPLITTER)[1];
-    }
-
 }
 
 module.exports = DeviceHiveUtils;

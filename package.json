@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/devicehive/devicehive-mqtt#readme",
   "dependencies": {
-    "mosca": "^2.5.2",
+    "lru-cache": "^4.1.1",
+    "mosca": "^2.6.0",
     "randomstring": "^1.1.5"
   }
 }
