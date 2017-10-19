@@ -8,27 +8,27 @@ const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
 const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL;
 
-let subscriptionManager = new SubscriptionManager();
-let wsFactory = new WebSocketFactory(WS_SERVER_URL);
-let server = new mosca.Server({ port: CONST.MQTT.PORT });
+const subscriptionManager = new SubscriptionManager();
+const wsFactory = new WebSocketFactory(WS_SERVER_URL);
+const server = new mosca.Server({ port: CONST.MQTT.PORT });
 
 
 wsFactory.on('globalMessage', (message, clientId) => {
-    let data = JSON.parse(message.data);
+    const messageData = JSON.parse(message.data);
 
-    if (data.subscriptionId) {
-        let topic = subscriptionManager.findSubject(clientId, data.subscriptionId);
+    if (messageData.subscriptionId) {
+        const topic = subscriptionManager.findSubject(clientId, messageData.subscriptionId);
 
         if (topic) {
-            if (data.action === DeviceHiveUtils.getTopicResponseAction(topic)) {
-                let mostGlobalTopic = subscriptionManager.getAllSubjects()
+            if (messageData.action === DeviceHiveUtils.getTopicResponseAction(topic)) {
+                const mostGlobalTopic = subscriptionManager.getAllSubjects()
                     .filter((existingTopic) => DeviceHiveUtils.isSameTopicRoot(existingTopic, topic))
                     .sort((topic1, topic2) => !DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2))[0];
 
                 if (mostGlobalTopic === topic) {
                     (subscriptionManager.getSubscriptionExecutor(topic, () => {
                         server.publish({
-                            topic: TopicStructure.toTopicString(data),
+                            topic: TopicStructure.toTopicString(messageData),
                             payload: message.data
                         });
                     }))();
@@ -36,7 +36,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
             }
         }
     } else {
-        let topic = TopicStructure.toTopicString(data, clientId);
+        const topic = TopicStructure.toTopicString(messageData, clientId);
 
         if (subscriptionManager.hasSubscriptionAttempt(clientId, topic)) {
             server.publish({
@@ -53,7 +53,7 @@ server.authenticate = function (client, username, password, callback) {
             wsFactory.getSocket(client.id)
                 .then((wSocket) => {
                     wSocket.createTokenByLoginInfo(username, password.toString())
-                        .then(({accessToken, refreshToken}) => wSocket.authenticate(accessToken))
+                        .then(({ accessToken, refreshToken }) => wSocket.authenticate(accessToken))
                         .then(() => process.nextTick(() => callback(null, true)))
                         .catch((err) => process.nextTick(() => callback(null, false)));
                 });
@@ -63,19 +63,19 @@ server.authenticate = function (client, username, password, callback) {
     } else {
         callback(null, false);
     }
-}
+};
 
 server.authorizePublish = function (client, topic, payload, callback) {
-    let topicStructure = new TopicStructure(topic);
+    const topicStructure = new TopicStructure(topic);
 
     callback(null, topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true);
-}
+};
 
 server.authorizeForward = function (client, packet, callback) {
-    let topicStructure = new TopicStructure(packet.topic);
+    const topicStructure = new TopicStructure(packet.topic);
 
     callback(null, topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true);
-}
+};
 
 server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
@@ -109,7 +109,7 @@ server.authorizeSubscribe = function (client, topic, callback) {
     } else {
         callback(null, false);
     }
-}
+};
 
 server.on('ready', () => {
     console.log('MQTT Broker has been started');
@@ -122,7 +122,7 @@ server.on('clientDisconnected', (client) => {
 
 server.on('published', (packet, client) => {
     if (client) {
-        let topicStructure = new TopicStructure(packet.topic);
+        const topicStructure = new TopicStructure(packet.topic);
 
         if (topicStructure.isRequest()) {
             wsFactory.getSocket(client.id)
@@ -134,7 +134,7 @@ server.on('published', (packet, client) => {
 
 server.on('unsubscribed', (topic, client) => {
     if (isDeviceHiveEventSubscriptionTopic(topic)) {
-        let subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
+        const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
         subscriptionManager.removeSubscriptionAttempt(client.id, topic);
 
@@ -168,7 +168,7 @@ function isTopicForbidden (topic) {
  * @returns {boolean}
  */
 function isDeviceHiveEventSubscriptionTopic (topic) {
-    let topicStructure = new TopicStructure(topic);
+    const topicStructure = new TopicStructure(topic);
     return topicStructure.isDH() &&
         (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
 }
@@ -223,7 +223,7 @@ function unsubscribeFromLessGlobalTopics (clientId, topic) {
     subscriptionManager.getSubjects(clientId)
         .filter((subscription) => DeviceHiveUtils.isMoreGlobalTopic(topic, subscription))
         .forEach((topicToUnsubscribe) => {
-            let subscriptionId = subscriptionManager.findSubscriptionId(clientId, topicToUnsubscribe);
+            const subscriptionId = subscriptionManager.findSubscriptionId(clientId, topicToUnsubscribe);
 
             if (subscriptionId) {
                 unsubscribe(clientId, topicToUnsubscribe, subscriptionId)
@@ -251,8 +251,8 @@ function isSubscriptionActual (clientId, topic) {
  * @param topic
  */
 function subscribeToNextMostGlobalTopic (clientId, topic) {
-    let subscriberSubscriptions = subscriptionManager.getSubscriptionAttempts(clientId);
-    let nextMostGlobalTopic = subscriberSubscriptions
+    const subscriberSubscriptions = subscriptionManager.getSubscriptionAttempts(clientId);
+    const nextMostGlobalTopic = subscriberSubscriptions
         .filter((existingSubject) => DeviceHiveUtils.isLessGlobalTopic(existingSubject, topic))
         .sort((subject1, subject2) => !DeviceHiveUtils.isMoreGlobalTopic(subject1, subject2))[0];
 
@@ -270,7 +270,7 @@ function subscribeToNextMostGlobalTopic (clientId, topic) {
  * @returns {boolean}
  */
 function isDeviceHiveResponseSubscriptionTopic (topic) {
-    let topicStructure = new TopicStructure(topic);
+    const topicStructure = new TopicStructure(topic);
 
     return topicStructure.isDH() && topicStructure.isResponse();
 }

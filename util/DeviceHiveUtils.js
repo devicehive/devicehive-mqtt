@@ -1,4 +1,3 @@
-const util = require('util');
 const CONST = require('./constants.json');
 const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
 const TopicStructure = require('../lib/TopicStructure.js');
@@ -14,8 +13,8 @@ class DeviceHiveUtils {
      * @returns {Object}
      */
     static createSubscriptionDataObject (topic) {
-        let topicStructure = new TopicStructure(topic);
-        let result = {
+        const topicStructure = new TopicStructure(topic);
+        const result = {
             action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
             networkIds: topicStructure.getDevice().length > 0 ? [] :topicStructure.getNetwork(),
             deviceIds: topicStructure.getDevice(),
@@ -37,9 +36,9 @@ class DeviceHiveUtils {
      */
     static isSameTopicRoot (topic1, topic2) {
         let result = true;
-        let splittedTopic1 = topic1.split('/');
-        let splittedTopic2 = topic2.split('/');
-        let smallestSize = splittedTopic1.length < splittedTopic2.length ?
+        const splittedTopic1 = topic1.split('/');
+        const splittedTopic2 = topic2.split('/');
+        const smallestSize = splittedTopic1.length < splittedTopic2.length ?
             splittedTopic1.length :
             splittedTopic2.length;
 
@@ -63,7 +62,7 @@ class DeviceHiveUtils {
      */
     static isLessGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        let topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
+        const topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
 
         if (topicToCheckPatterns.includes(topicToCompare)) {
             result = true;
@@ -80,7 +79,7 @@ class DeviceHiveUtils {
      */
     static isMoreGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        let topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
+        const topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
 
         if (topicToComparePatterns.includes(topicToCheck)) {
             result = true;
@@ -96,7 +95,7 @@ class DeviceHiveUtils {
      */
     static getTopicSubscribeRequestAction (topic) {
         let action = '';
-        let topicStructure = new TopicStructure(topic);
+        const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
@@ -114,7 +113,7 @@ class DeviceHiveUtils {
      */
     static getTopicUnsubscribeRequestAction (topic) {
         let action = '';
-        let topicStructure = new TopicStructure(topic);
+        const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
@@ -132,7 +131,7 @@ class DeviceHiveUtils {
      */
     static getTopicResponseAction (topic) {
         let action = '';
-        let topicStructure = new TopicStructure(topic);
+        const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isNotification()) {
             action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
