@@ -1,4 +1,4 @@
-const WebSocketFactory = require(`../../lib/WebSocketFactory.js`);
+const WebSocketFactory = require(`../../../lib/WebSocketFactory.js`);
 const WebSocketServer = require(`ws`).Server;
 const sinon = require(`sinon`);
 const chai = require(`chai`);

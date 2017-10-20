@@ -1,4 +1,4 @@
-const TopicStructure = require(`../../lib/TopicStructure.js`);
+const TopicStructure = require(`../../../lib/TopicStructure.js`);
 const chai = require(`chai`);
 const expect = chai.expect;
 

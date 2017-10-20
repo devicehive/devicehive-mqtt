@@ -1,4 +1,4 @@
-const SubscriptionEntry = require(`../../lib/SubscriptionEntry.js`);
+const SubscriptionEntry = require(`../../../lib/SubscriptionEntry.js`);
 const chai = require(`chai`);
 const expect = chai.expect;
 

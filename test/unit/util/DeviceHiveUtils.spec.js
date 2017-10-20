@@ -1,4 +1,4 @@
-const DeviceHiveUtils = require(`../../util/DeviceHiveUtils.js`);
+const DeviceHiveUtils = require(`../../../util/DeviceHiveUtils.js`);
 const chai = require(`chai`);
 const expect = chai.expect;
 
