@@ -288,6 +288,8 @@ describe(`MQTT broker (should bu ran on localhost:1883)`, () => {
             assert.fail(`error`, `no error`, err);
         });
 
+        /** TODO find better way than check expectations in setTimeout
+         */
         setTimeout(() => {
             expect(subscription1Spy.calledOnce).to.equal(true);
             expect(subscription2Spy.calledOnce).to.equal(true);
@@ -356,6 +358,8 @@ describe(`MQTT broker (should bu ran on localhost:1883)`, () => {
             }
         });
 
+        /** TODO find better way than check expectations in setTimeout
+         */
         setTimeout(() => {
             mqttClient2.end();
             mqttClient3.end();
