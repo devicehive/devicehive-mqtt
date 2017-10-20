@@ -16,9 +16,9 @@ class DeviceHiveUtils {
         const topicStructure = new TopicStructure(topic);
         const result = {
             action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getDevice().length > 0 ? [] :topicStructure.getNetwork(),
-            deviceIds: topicStructure.getDevice(),
-            names: topicStructure.getName()
+            networkIds: topicStructure.getDevice().length > 0 ? [] : [topicStructure.getNetwork()],
+            deviceIds: topicStructure.getDevice() ? [topicStructure.getDevice()] : [],
+            names: topicStructure.getName() ? [topicStructure.getName()] : []
         };
 
         if (topicStructure.isCommandUpdate()) {
@@ -97,10 +97,12 @@ class DeviceHiveUtils {
         let action = '';
         const topicStructure = new TopicStructure(topic);
 
-        if (topicStructure.isNotification()) {
-            action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
-        } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
-            action = CONST.WS.ACTIONS.COMMAND_SUBSCRIBE;
+        if (topicStructure.isSubscription()) {
+            if (topicStructure.isNotification()) {
+                action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
+            } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
+                action = CONST.WS.ACTIONS.COMMAND_SUBSCRIBE;
+            }
         }
 
         return action;
@@ -115,10 +117,12 @@ class DeviceHiveUtils {
         let action = '';
         const topicStructure = new TopicStructure(topic);
 
-        if (topicStructure.isNotification()) {
-            action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
-        } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
-            action = CONST.WS.ACTIONS.COMMAND_UNSUBSCRIBE;
+        if (topicStructure.isSubscription()) {
+            if (topicStructure.isNotification()) {
+                action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
+            } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
+                action = CONST.WS.ACTIONS.COMMAND_UNSUBSCRIBE;
+            }
         }
 
         return action;
@@ -129,16 +133,18 @@ class DeviceHiveUtils {
      * @param topic
      * @returns {string}
      */
-    static getTopicResponseAction (topic) {
+    static getTopicSubscriptionResponseAction (topic) {
         let action = '';
         const topicStructure = new TopicStructure(topic);
 
-        if (topicStructure.isNotification()) {
-            action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
-        } else if (topicStructure.isCommandUpdate()) {
-            action = CONST.WS.ACTIONS.COMMAND_UPDATE;
-        } else if (topicStructure.isCommandInsert()) {
-            action = CONST.WS.ACTIONS.COMMAND_INSERT;
+        if (topicStructure.isSubscription()) {
+            if (topicStructure.isNotification()) {
+                action = CONST.WS.ACTIONS.NOTIFICATION_INSERT;
+            } else if (topicStructure.isCommandUpdate()) {
+                action = CONST.WS.ACTIONS.COMMAND_UPDATE;
+            } else if (topicStructure.isCommandInsert()) {
+                action = CONST.WS.ACTIONS.COMMAND_INSERT;
+            }
         }
 
         return action;

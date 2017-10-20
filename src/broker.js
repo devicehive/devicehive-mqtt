@@ -20,7 +20,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
         const topic = subscriptionManager.findSubject(clientId, messageData.subscriptionId);
 
         if (topic) {
-            if (messageData.action === DeviceHiveUtils.getTopicResponseAction(topic)) {
+            if (messageData.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
                 const mostGlobalTopic = subscriptionManager.getAllSubjects()
                     .filter((existingTopic) => DeviceHiveUtils.isSameTopicRoot(existingTopic, topic))
                     .sort((topic1, topic2) => !DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2))[0];
@@ -52,8 +52,8 @@ server.authenticate = function (client, username, password, callback) {
         if (username && password) {
             wsFactory.getSocket(client.id)
                 .then((wSocket) => {
-                    wSocket.createTokenByLoginInfo(username, password.toString())
-                        .then(({ accessToken, refreshToken }) => wSocket.authenticate(accessToken))
+                    createTokenByLoginInfo(wSocket, username, password.toString())
+                        .then(({ accessToken, refreshToken }) => authenticate(wSocket, accessToken))
                         .then(() => process.nextTick(() => callback(null, true)))
                         .catch((err) => process.nextTick(() => callback(null, false)));
                 });
@@ -169,7 +169,7 @@ function isTopicForbidden (topic) {
  */
 function isDeviceHiveEventSubscriptionTopic (topic) {
     const topicStructure = new TopicStructure(topic);
-    return topicStructure.isDH() &&
+    return topicStructure.isDH() && topicStructure.isSubscription() &&
         (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
 }
 
@@ -273,4 +273,37 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
     const topicStructure = new TopicStructure(topic);
 
     return topicStructure.isDH() && topicStructure.isResponse();
+}
+
+/**
+ * Get access and refresh token for by user credentials
+ * @param ws {WebSocket} - WebSocket
+ * @param login {String} - user login
+ * @param password {String} = user password
+ * @returns {Promise}
+ */
+function createTokenByLoginInfo (ws, login, password) {
+    return ws.send({
+        action: CONST.WS.ACTIONS.TOKEN,
+        login: login,
+        password: password
+    }).then(({ accessToken, refreshToken }) => {
+        ws.setAccessToken(accessToken);
+        ws.setRefreshToken(refreshToken);
+
+        return { accessToken, refreshToken };
+    });
+}
+
+/**
+ * Authenticate user by accessToken
+ * @param ws {WebSocket} WebSocket
+ * @param accessToken {string}
+ * @returns {Promise}
+ */
+function authenticate (ws, accessToken) {
+    return ws.send({
+        action: CONST.WS.ACTIONS.AUTHENTICATE,
+        token: accessToken
+    })
 }
