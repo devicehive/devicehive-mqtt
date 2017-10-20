@@ -4,6 +4,10 @@ const chai = require(`chai`);
 const expect = chai.expect;
 
 describe(SubscriptionManager.name, () => {
+    const listOfMethods = [`addSubjectSubscriber`, `removeSubjectSubscriber`, `hasSubscription`,
+        `getSubscriptionExecutor`, `getSubjects`, `getAllSubjects`, `findSubject`, `findSubscriptionId`,
+        `getSubscribers`, `getExecutionCounter`, `incExecutionCounter`, `resetExecutionCounter`,
+        `addSubscriptionAttempt`, `getSubscriptionAttempts`, `removeSubscriptionAttempt`, `hasSubscriptionAttempt`];
     const subscriber1 = `subscriber1`;
     const subscriber2 = `subscriber2`;
     const subscriber3 = `subscriber3`;
@@ -21,6 +25,12 @@ describe(SubscriptionManager.name, () => {
 
     it(`should be a class`, () => {
         expect(SubscriptionManager).to.be.a(`Function`);
+    });
+
+    it(`should has next methods: ${listOfMethods.join(`, `)}`, () => {
+        listOfMethods.forEach((methodName) => {
+            expect(new SubscriptionManager()[methodName]).to.be.a(`Function`);
+        });
     });
 
     describe(`Basic functionality`, () => {

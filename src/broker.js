@@ -169,7 +169,7 @@ function isTopicForbidden (topic) {
  */
 function isDeviceHiveEventSubscriptionTopic (topic) {
     const topicStructure = new TopicStructure(topic);
-    return topicStructure.isDH() &&
+    return topicStructure.isDH() && topicStructure.isSubscription() &&
         (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
 }
 
