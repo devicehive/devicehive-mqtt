@@ -7,7 +7,7 @@ const assert = chai.assert;
 
 const mqtt = require(`mqtt`);
 
-describe(`MQTT broker (should bu ran on localhost:1883)`, () => {
+describe(`MQTT broker (should be run on localhost:1883)`, () => {
     const DH_RESPONSE_TOPIC = `dh/response`;
     const DH_REQUEST_TOPIC = `dh/request`;
     const MQTT_BROKER_URL = `mqtt://localhost:1883`;
