@@ -6,13 +6,9 @@ const expect = chai.expect;
 
 
 describe(WebSocket.name, () => {
-    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`,
-        `send`, `sendString`, `lock`, `unlock`, `isLocked`, `setAccessToken`,
-        `getAccessToken`, `setRefreshToken`, `getRefreshToken`];
+    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`, `send`, `sendString`];
     const testMessage = 'testMessage';
     const testObject = { testMessage: testMessage, status: "success" };
-    const accessToken = 'accessToken';
-    const refreshToken = 'refreshToken';
     const WS_SERVER_PORT = 9090;
     const WS_SERVER_URL = `ws://127.0.0.1:${WS_SERVER_PORT}`;
 
@@ -24,24 +20,6 @@ describe(WebSocket.name, () => {
     it(`should has next methods: ${listOfMethods.join(`, `)}`, () => {
         listOfMethods.forEach((methodName) => {
             expect(new WebSocket(WS_SERVER_URL)[methodName]).to.be.a(`Function`);
-        });
-    });
-
-    describe(`Tokens`, () => {
-        it(`should set access token`, () => {
-            const wsClient = new WebSocket(WS_SERVER_URL);
-
-            wsClient.setAccessToken(accessToken);
-
-            expect(wsClient.getAccessToken()).to.equal(accessToken);
-        });
-
-        it(`should set refresh token`, () => {
-            const wsClient = new WebSocket(WS_SERVER_URL);
-
-            wsClient.setRefreshToken(refreshToken);
-
-            expect(wsClient.getRefreshToken()).to.equal(refreshToken);
         });
     });
 
@@ -59,8 +37,7 @@ describe(WebSocket.name, () => {
 
         it('should fire events', (done) => {
             const checkExpectation = () => {
-                if (openSpy.calledOnce && messageSpy.calledOnce && closeSpy.calledOnce &&
-                    lockedSpy.calledOnce && unlockedSpy.calledOnce) {
+                if (openSpy.calledOnce && messageSpy.calledOnce && closeSpy.calledOnce) {
                     done();
                 }
             };
@@ -68,8 +45,6 @@ describe(WebSocket.name, () => {
             const openSpy = sinon.spy(checkExpectation);
             const messageSpy = sinon.spy(checkExpectation);
             const closeSpy = sinon.spy(checkExpectation);
-            const lockedSpy = sinon.spy(checkExpectation);
-            const unlockedSpy = sinon.spy(checkExpectation);
 
             wsServer.on('connection', (ws) => {
                 ws.on(`message`, (message) => {
@@ -81,64 +56,13 @@ describe(WebSocket.name, () => {
                 openSpy();
                 wsClient.sendString(testMessage);
             });
+
             wsClient.on('message', () => {
                 messageSpy();
                 wsClient.close();
             });
-            wsClient.on('locked', () => lockedSpy());
-            wsClient.on('unlocked', () => unlockedSpy());
+
             wsClient.on('close', () => closeSpy());
-        });
-    });
-
-    describe(`Locking resource`, () => {
-        let wsServer, wsClient;
-
-        beforeEach(() => {
-            wsServer = new WebSocketServer({ port: WS_SERVER_PORT });
-            wsClient = new WebSocket(WS_SERVER_URL);
-        });
-
-        afterEach(() => {
-            wsClient.close();
-            wsServer.close();
-        });
-
-        it(`should lock and unlock the WS resource (send)`, (done) => {
-            wsServer.on('connection', (ws) => {
-                ws.on(`message`, (message) => {
-                    ws.send(message);
-                })
-            });
-
-            wsClient.on(`open`, () => {
-                expect(wsClient.isLocked()).to.equal(false);
-                wsClient.send(testObject)
-                    .then(() => {
-                        expect(wsClient.isLocked()).to.equal(false);
-                        done();
-                    });
-                expect(wsClient.isLocked()).to.equal(true);
-            });
-        });
-
-        it(`should lock and unlock the WS resource (sendString)`, (done) => {
-            wsServer.on('connection', (ws) => {
-                ws.on(`message`, (message) => {
-                    ws.send(message);
-                })
-            });
-
-            wsClient.on(`open`, () => {
-                expect(wsClient.isLocked()).to.equal(false);
-                wsClient.sendString(testMessage);
-                expect(wsClient.isLocked()).to.equal(true);
-            });
-
-            wsClient.on(`message`, () => {
-                expect(wsClient.isLocked()).to.equal(false);
-                done();
-            });
         });
     });
 

@@ -3,6 +3,7 @@
   "DEV": "dev",
   "MQTT": {
     "PORT": 1883,
+    "TLS_PORT": 8443,
     "WILDCARDS": [
       "+",
       "#"

@@ -1,19 +1,30 @@
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
-const WebSocketFactory = require('../lib/WebSocketFactory.js');
+const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
-const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL;
+//const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL;
+const WS_SERVER_URL = `ws://playground.dev.devicehive.com/api/websocket`;
+const SECURE_KEY = `./../cert/key.pem`;
+const SECURE_CERT = `./../cert/cert.pem`;
 
 const subscriptionManager = new SubscriptionManager();
-const wsFactory = new WebSocketFactory(WS_SERVER_URL);
-const server = new mosca.Server({ port: CONST.MQTT.PORT });
+const wsManager = new WebSocketManager(WS_SERVER_URL);
+const server = new mosca.Server({
+    interfaces: [
+        { type: "mqtt", port: CONST.MQTT.PORT },
+        { type: "mqtts", port: CONST.MQTT.TLS_PORT, credentials: { keyPath: SECURE_KEY, certPath: SECURE_CERT, passphrase: `qwertyui` } }
+    ],
+    persistence: {
+        factory: mosca.persistence.Memory
+    }
+});
 
 
-wsFactory.on('globalMessage', (message, clientId) => {
+wsManager.on('message', (clientId, message) => {
     const messageData = JSON.parse(message.data);
 
     if (messageData.subscriptionId) {
@@ -48,15 +59,12 @@ wsFactory.on('globalMessage', (message, clientId) => {
 });
 
 server.authenticate = function (client, username, password, callback) {
-    if (!wsFactory.hasSocket(client.id)) {
+    if (!wsManager.hasKey(client.id)) {
         if (username && password) {
-            wsFactory.getSocket(client.id)
-                .then((wSocket) => {
-                    createTokenByLoginInfo(wSocket, username, password.toString())
-                        .then(({ accessToken, refreshToken }) => authenticate(wSocket, accessToken))
-                        .then(() => process.nextTick(() => callback(null, true)))
-                        .catch((err) => process.nextTick(() => callback(null, false)));
-                });
+            createTokenByLoginInfo(client.id, username, password.toString())
+                .then(({ accessToken, refreshToken }) => authenticate(client.id, accessToken))
+                .then(() => process.nextTick(() => callback(null, true)))
+                .catch((err) => process.nextTick(() => callback(null, false)));
         } else {
             callback(null, false);
         }
@@ -116,8 +124,7 @@ server.on('ready', () => {
 });
 
 server.on('clientDisconnected', (client) => {
-    wsFactory.removeSocket(client.id)
-        .catch((err) => console.warn(err));
+    wsManager.close(client.id);
 });
 
 server.on('published', (packet, client) => {
@@ -125,9 +132,7 @@ server.on('published', (packet, client) => {
         const topicStructure = new TopicStructure(packet.topic);
 
         if (topicStructure.isRequest()) {
-            wsFactory.getSocket(client.id)
-                .then((wSocket) => wSocket.sendString(packet.payload.toString()))
-                .catch((err) => console.warn(err));
+            wsManager.sendString(client.id, packet.payload.toString());
         }
     }
 });
@@ -191,8 +196,7 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function subscribe (clientId, topic) {
-    return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send(DeviceHiveUtils.createSubscriptionDataObject(topic)))
+    return wsManager.send(clientId, DeviceHiveUtils.createSubscriptionDataObject(topic))
         .catch(err => console.warn(err));
 }
 
@@ -205,11 +209,10 @@ function subscribe (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function unsubscribe (clientId, topic, subscriptionId) {
-    return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send({
+    return wsManager.send(clientId, {
             action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
             subscriptionId: subscriptionId
-        }))
+        })
         .catch(err => console.warn(err));
 }
 
@@ -277,32 +280,31 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
 
 /**
  * Get access and refresh token for by user credentials
- * @param ws {WebSocket} - WebSocket
+ * @param clientId {string} - client id
  * @param login {String} - user login
  * @param password {String} = user password
  * @returns {Promise}
  */
-function createTokenByLoginInfo (ws, login, password) {
-    return ws.send({
+function createTokenByLoginInfo (clientId, login, password) {
+    return wsManager.send(clientId, {
         action: CONST.WS.ACTIONS.TOKEN,
         login: login,
         password: password
-    }).then(({ accessToken, refreshToken }) => {
-        ws.setAccessToken(accessToken);
-        ws.setRefreshToken(refreshToken);
+    }).then((tokens) => {
+        wsManager.setTokens(clientId, tokens);
 
-        return { accessToken, refreshToken };
+        return tokens;
     });
 }
 
 /**
  * Authenticate user by accessToken
- * @param ws {WebSocket} WebSocket
+ * @param clientId {string} client id
  * @param accessToken {string}
  * @returns {Promise}
  */
-function authenticate (ws, accessToken) {
-    return ws.send({
+function authenticate (clientId, accessToken) {
+    return wsManager.send(clientId, {
         action: CONST.WS.ACTIONS.AUTHENTICATE,
         token: accessToken
     })
