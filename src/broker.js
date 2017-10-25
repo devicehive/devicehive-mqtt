@@ -5,9 +5,16 @@ const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
+/**
+ * Environmental configuration
+ * NODE_ENV - "dev" for development
+ * WS_SERVER_URL - path to Web Socket server
+ * REDIS_DEV_URL - path to Redis storage
+ */
+
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
-const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
-const REDIS_SERVER_URL = IS_DEV ? CONST.PERSISTENCE.REDIS_DEV_URL : process.env.REDIS_SERVER_URL || CONST.PERSISTENCE.REDIS_DEV_URL;
+const WS_SERVER_URL = process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
+const REDIS_SERVER_URL = process.env.REDIS_SERVER_URL || CONST.PERSISTENCE.REDIS_DEV_URL;
 
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
@@ -25,13 +32,15 @@ const server = new mosca.Server({
 
 
 wsManager.on('message', (clientId, message) => {
-    const messageData = JSON.parse(message.data);
+    const messageObject = JSON.parse(message.data);
 
-    if (messageData.subscriptionId) {
-        const topic = subscriptionManager.findSubject(clientId, messageData.subscriptionId);
+    handleTokenAndAuthResponses(messageObject, clientId);
+
+    if (messageObject.subscriptionId) {
+        const topic = subscriptionManager.findSubject(clientId, messageObject.subscriptionId);
 
         if (topic) {
-            if (messageData.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
+            if (messageObject.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
                 const mostGlobalTopic = subscriptionManager.getAllSubjects()
                     .filter((existingTopic) => DeviceHiveUtils.isSameTopicRoot(existingTopic, topic))
                     .sort((topic1, topic2) => !DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2))[0];
@@ -39,7 +48,7 @@ wsManager.on('message', (clientId, message) => {
                 if (mostGlobalTopic === topic) {
                     (subscriptionManager.getSubscriptionExecutor(topic, () => {
                         server.publish({
-                            topic: TopicStructure.toTopicString(messageData),
+                            topic: TopicStructure.toTopicString(messageObject),
                             payload: message.data
                         });
                     }))();
@@ -47,7 +56,7 @@ wsManager.on('message', (clientId, message) => {
             }
         }
     } else {
-        const topic = TopicStructure.toTopicString(messageData, clientId);
+        const topic = TopicStructure.toTopicString(messageObject, clientId);
 
         if (subscriptionManager.hasSubscriptionAttempt(clientId, topic)) {
             server.publish({
@@ -87,30 +96,43 @@ server.authorizeForward = function (client, packet, callback) {
 
 server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
-        if (isDeviceHiveEventSubscriptionTopic(topic)) {
-            if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
-                subscribe(client.id, topic)
-                    .then((subscriptionResponse) => {
-                        if (isSubscriptionActual(client.id, topic)) {
-                            unsubscribeFromLessGlobalTopics(client.id, topic);
+        if (isDeviceHiveTopic(topic)) {
+            if (wsManager.isAuthorized(client.id)) {
+                if (isDeviceHiveEventSubscriptionTopic(topic)) {
+                    if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
+                        subscribe(client.id, topic)
+                            .then((subscriptionResponse) => {
+                                if (isSubscriptionActual(client.id, topic)) {
+                                    unsubscribeFromLessGlobalTopics(client.id, topic);
+                                    subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
+                                    callback(null, true);
+                                } else {
+                                    unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
+                                        .then(() => process.nextTick(() => callback(null, false)))
+                                        .catch((err) => process.nextTick(() => console.warn(err)));
+                                }
+                            })
+                            .catch(() => process.nextTick(() => callback(null, false)));
+                    } else {
+                        callback(null, true);
+                    }
 
-                            subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
-                            callback(null, true);
-                        } else {
-                            unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
-                                .then(() => process.nextTick(() => callback(null, false)))
-                                .catch((err) => process.nextTick(() => console.warn(err)));
-                        }
-                    })
-                    .catch(() => process.nextTick(() => callback(null, false)));
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                } else {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                }
             } else {
-                callback(null, true);
+                if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                } else {
+                    callback(null, false);
+                }
             }
-
-            subscriptionManager.addSubscriptionAttempt(client.id, topic);
-        } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-            subscriptionManager.addSubscriptionAttempt(client.id, topic);
-            callback(null, true);
         } else {
             callback(null, true);
         }
@@ -127,17 +149,9 @@ server.on('clientDisconnected', (client) => {
     wsManager.close(client.id);
 });
 
-let counter = 0;
-
-setInterval(() => {
-    console.log(process.pid, counter);
-}, 15000);
-
 server.on('published', (packet, client) => {
     if (client) {
         const topicStructure = new TopicStructure(packet.topic);
-
-        counter++;
 
         if (topicStructure.isRequest()) {
             wsManager.sendString(client.id, packet.payload.toString());
@@ -146,22 +160,19 @@ server.on('published', (packet, client) => {
 });
 
 server.on('unsubscribed', (topic, client) => {
-    if (isDeviceHiveEventSubscriptionTopic(topic)) {
+    if (isDeviceHiveTopic(topic)) {
         const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
         subscriptionManager.removeSubscriptionAttempt(client.id, topic);
 
-        if (subscriptionId) {
+        if (isDeviceHiveEventSubscriptionTopic(topic) && subscriptionId) {
             unsubscribe(client.id, topic, subscriptionId)
                 .then(() => {
                     subscribeToNextMostGlobalTopic(client.id, topic);
-
                     subscriptionManager.removeSubjectSubscriber(topic, client.id);
                 })
                 .catch((err) => console.warn(err));
         }
-    } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-        subscriptionManager.removeSubscriptionAttempt(client.id, topic);
     }
 });
 
@@ -284,4 +295,44 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
     const topicStructure = new TopicStructure(topic);
 
     return topicStructure.isDH() && topicStructure.isResponse();
+}
+
+/**
+ * Check that topic is DH topic
+ * @param topic
+ * @return {boolean}
+ */
+function isDeviceHiveTopic (topic) {
+    return (new TopicStructure(topic)).isDH();
+}
+
+/**
+ * Check that topic is
+ * @param topic
+ * @return {boolean}
+ */
+function isDeviceHiveTokensOrAuthResponseTopic (topic) {
+    const topicStructure = new TopicStructure(topic);
+    const action = topicStructure.getAction();
+
+    return topicStructure.isDH() && topicStructure.isResponse() &&
+        (action === CONST.TOPICS.PARTS.TOKEN || action === CONST.TOPICS.PARTS.AUTHENTICATE);
+}
+
+/**
+ * Handle token and auth responses
+ * @param messageObject
+ * @param clientId
+ */
+function handleTokenAndAuthResponses (messageObject, clientId) {
+    if (messageObject.status === CONST.WS.SUCCESS_STATUS && wsManager.hasKey(clientId)) {
+        switch (messageObject.action) {
+            case CONST.WS.ACTIONS.TOKEN:
+                wsManager.setTokens(clientId, messageObject.accessToken, messageObject.refreshToken);
+                break;
+            case CONST.WS.ACTIONS.AUTHENTICATE:
+                wsManager.setAuthorized(clientId);
+                break;
+        }
+    }
 }

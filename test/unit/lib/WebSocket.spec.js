@@ -6,9 +6,8 @@ const expect = chai.expect;
 
 
 describe(WebSocket.name, () => {
-    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`, `send`, `sendString`];
+    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`, `sendString`];
     const testMessage = 'testMessage';
-    const testObject = { testMessage: testMessage, status: "success" };
     const WS_SERVER_PORT = 9090;
     const WS_SERVER_URL = `ws://127.0.0.1:${WS_SERVER_PORT}`;
 
@@ -91,17 +90,6 @@ describe(WebSocket.name, () => {
             wsServer.on('connection', (ws) => {
                 ws.on(`message`, (message) => {
                     expect(message).to.equal(testMessage);
-                    done();
-                })
-            });
-        });
-
-        it(`should send test object to web socket server`, (done) => {
-            wsClient.on(`open`, () => wsClient.send(testObject));
-
-            wsServer.on('connection', (ws) => {
-                ws.on(`message`, (message) => {
-                    expect(JSON.parse(message)).to.deep.equal(testObject);
                     done();
                 })
             });

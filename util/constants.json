@@ -16,6 +16,7 @@
   },
   "WS": {
     "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket",
+    "SUCCESS_STATUS": "success",
     "ACTIONS": {
       "AUTHENTICATE": "authenticate",
       "TOKEN": "token",
@@ -30,14 +31,16 @@
   },
   "TOPICS": {
     "TOKEN": "dh/request/token",
-    "AUTHENTICATION": "dh/request/authentication",
+    "AUTHENTICATE": "dh/request/authenticate",
     "PARTS": {
       "DH": "dh",
       "RESPONSE": "response",
       "REQUEST": "request",
       "NOTIFICATION": "notification",
       "COMMAND": "command",
-      "COMMAND_UPDATE": "command_update"
+      "COMMAND_UPDATE": "command_update",
+      "TOKEN": "token",
+      "AUTHENTICATE": "authenticate"
     },
     "FORBIDDEN": {
       "START_WITH": [
