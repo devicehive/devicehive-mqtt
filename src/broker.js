@@ -6,20 +6,20 @@ const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
-//const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL;
-const WS_SERVER_URL = `ws://playground.dev.devicehive.com/api/websocket`;
-const SECURE_KEY = `./../cert/key.pem`;
-const SECURE_CERT = `./../cert/cert.pem`;
+const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
+const REDIS_SERVER_URL = IS_DEV ? CONST.PERSISTENCE.REDIS_DEV_URL : process.env.REDIS_SERVER_URL || CONST.PERSISTENCE.REDIS_DEV_URL;
 
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
 const server = new mosca.Server({
-    interfaces: [
-        { type: "mqtt", port: CONST.MQTT.PORT },
-        { type: "mqtts", port: CONST.MQTT.TLS_PORT, credentials: { keyPath: SECURE_KEY, certPath: SECURE_CERT, passphrase: `qwertyui` } }
-    ],
+    port: CONST.MQTT.PORT,
     persistence: {
-        factory: mosca.persistence.Memory
+        factory: mosca.persistence.Redis,
+        url: REDIS_SERVER_URL,
+        ttl: {
+            subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
+            packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
+        }
     }
 });
 
@@ -61,12 +61,12 @@ wsManager.on('message', (clientId, message) => {
 server.authenticate = function (client, username, password, callback) {
     if (!wsManager.hasKey(client.id)) {
         if (username && password) {
-            createTokenByLoginInfo(client.id, username, password.toString())
-                .then(({ accessToken, refreshToken }) => authenticate(client.id, accessToken))
+            wsManager.createTokens(client.id, username, password.toString())
+                .then(({ accessToken, refreshToken }) => wsManager.authenticate(client.id, accessToken))
                 .then(() => process.nextTick(() => callback(null, true)))
                 .catch((err) => process.nextTick(() => callback(null, false)));
         } else {
-            callback(null, false);
+            callback(null, true);
         }
     } else {
         callback(null, false);
@@ -127,9 +127,17 @@ server.on('clientDisconnected', (client) => {
     wsManager.close(client.id);
 });
 
+let counter = 0;
+
+setInterval(() => {
+    console.log(process.pid, counter);
+}, 15000);
+
 server.on('published', (packet, client) => {
     if (client) {
         const topicStructure = new TopicStructure(packet.topic);
+
+        counter++;
 
         if (topicStructure.isRequest()) {
             wsManager.sendString(client.id, packet.payload.toString());
@@ -276,36 +284,4 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
     const topicStructure = new TopicStructure(topic);
 
     return topicStructure.isDH() && topicStructure.isResponse();
-}
-
-/**
- * Get access and refresh token for by user credentials
- * @param clientId {string} - client id
- * @param login {String} - user login
- * @param password {String} = user password
- * @returns {Promise}
- */
-function createTokenByLoginInfo (clientId, login, password) {
-    return wsManager.send(clientId, {
-        action: CONST.WS.ACTIONS.TOKEN,
-        login: login,
-        password: password
-    }).then((tokens) => {
-        wsManager.setTokens(clientId, tokens);
-
-        return tokens;
-    });
-}
-
-/**
- * Authenticate user by accessToken
- * @param clientId {string} client id
- * @param accessToken {string}
- * @returns {Promise}
- */
-function authenticate (clientId, accessToken) {
-    return wsManager.send(clientId, {
-        action: CONST.WS.ACTIONS.AUTHENTICATE,
-        token: accessToken
-    })
 }

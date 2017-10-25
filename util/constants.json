@@ -9,6 +9,11 @@
       "#"
     ]
   },
+  "PERSISTENCE": {
+    "REDIS_DEV_URL": "localhost:6379",
+    "MAX_NUMBER_OF_SUBSCRIPTIONS": 600000,
+    "MAX_NUMBER_OF_PACKETS": 600000
+  },
   "WS": {
     "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket",
     "ACTIONS": {
