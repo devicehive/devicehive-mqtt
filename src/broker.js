@@ -6,15 +6,17 @@ const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
 /**
- * Environmental configuration
+ * Environmental variables
  * NODE_ENV - "dev" for development
  * WS_SERVER_URL - path to Web Socket server
- * REDIS_DEV_URL - path to Redis storage
+ * REDIS_SERVER_HOST - Redis storage host
+ * REDIS_SERVER_PORT - Redis storage port
  */
 
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
 const WS_SERVER_URL = process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
-const REDIS_SERVER_URL = process.env.REDIS_SERVER_URL || CONST.PERSISTENCE.REDIS_DEV_URL;
+const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.REDIS_DEV_HOST;
+const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
 
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
@@ -22,7 +24,8 @@ const server = new mosca.Server({
     port: CONST.MQTT.PORT,
     persistence: {
         factory: mosca.persistence.Redis,
-        url: REDIS_SERVER_URL,
+        host: REDIS_SERVER_HOST,
+        port: REDIS_SERVER_PORT,
         ttl: {
             subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
             packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS

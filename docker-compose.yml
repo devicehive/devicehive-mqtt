@@ -1,0 +1,15 @@
+version: '3'
+services:
+  broker:
+    build: .
+    environment:
+      - NODE_ENV=prod
+      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+    ports:
+      - "1883:1883"
+    links:
+      - redis
+  redis:
+    image: "redis:alpine"
