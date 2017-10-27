@@ -1,26 +1,49 @@
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
-const WebSocketFactory = require('../lib/WebSocketFactory.js');
+const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
+/**
+ * Environmental variables
+ * NODE_ENV - "dev" for development
+ * WS_SERVER_URL - path to Web Socket server
+ * REDIS_SERVER_HOST - Redis storage host
+ * REDIS_SERVER_PORT - Redis storage port
+ */
+
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
-const WS_SERVER_URL = IS_DEV ? CONST.WS.DEV_HOST : process.env.WS_SERVER_URL;
+const WS_SERVER_URL = process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
+const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.REDIS_DEV_HOST;
+const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
 
 const subscriptionManager = new SubscriptionManager();
-const wsFactory = new WebSocketFactory(WS_SERVER_URL);
-const server = new mosca.Server({ port: CONST.MQTT.PORT });
+const wsManager = new WebSocketManager(WS_SERVER_URL);
+const server = new mosca.Server({
+    port: CONST.MQTT.PORT,
+    persistence: {
+        factory: mosca.persistence.Redis,
+        host: REDIS_SERVER_HOST,
+        port: REDIS_SERVER_PORT,
+        ttl: {
+            subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
+            packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
+        }
+    }
+});
 
 
-wsFactory.on('globalMessage', (message, clientId) => {
-    const messageData = JSON.parse(message.data);
+wsManager.on('message', (clientId, message) => {
+    const messageObject = JSON.parse(message.data);
 
-    if (messageData.subscriptionId) {
-        const topic = subscriptionManager.findSubject(clientId, messageData.subscriptionId);
+    handleTokenAndAuthResponses(messageObject, clientId);
+
+    if (messageObject.subscriptionId) {
+        const topic = subscriptionManager.findSubject(clientId, messageObject.subscriptionId);
 
         if (topic) {
-            if (messageData.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
+            if (messageObject.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
                 const mostGlobalTopic = subscriptionManager.getAllSubjects()
                     .filter((existingTopic) => DeviceHiveUtils.isSameTopicRoot(existingTopic, topic))
                     .sort((topic1, topic2) => !DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2))[0];
@@ -28,7 +51,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
                 if (mostGlobalTopic === topic) {
                     (subscriptionManager.getSubscriptionExecutor(topic, () => {
                         server.publish({
-                            topic: TopicStructure.toTopicString(messageData),
+                            topic: TopicStructure.toTopicString(messageObject),
                             payload: message.data
                         });
                     }))();
@@ -36,7 +59,7 @@ wsFactory.on('globalMessage', (message, clientId) => {
             }
         }
     } else {
-        const topic = TopicStructure.toTopicString(messageData, clientId);
+        const topic = TopicStructure.toTopicString(messageObject, clientId);
 
         if (subscriptionManager.hasSubscriptionAttempt(clientId, topic)) {
             server.publish({
@@ -48,17 +71,14 @@ wsFactory.on('globalMessage', (message, clientId) => {
 });
 
 server.authenticate = function (client, username, password, callback) {
-    if (!wsFactory.hasSocket(client.id)) {
+    if (!wsManager.hasKey(client.id)) {
         if (username && password) {
-            wsFactory.getSocket(client.id)
-                .then((wSocket) => {
-                    createTokenByLoginInfo(wSocket, username, password.toString())
-                        .then(({ accessToken, refreshToken }) => authenticate(wSocket, accessToken))
-                        .then(() => process.nextTick(() => callback(null, true)))
-                        .catch((err) => process.nextTick(() => callback(null, false)));
-                });
+            wsManager.createTokens(client.id, username, password.toString())
+                .then(({ accessToken, refreshToken }) => wsManager.authenticate(client.id, accessToken))
+                .then(() => process.nextTick(() => callback(null, true)))
+                .catch((err) => process.nextTick(() => callback(null, false)));
         } else {
-            callback(null, false);
+            callback(null, true);
         }
     } else {
         callback(null, false);
@@ -79,30 +99,43 @@ server.authorizeForward = function (client, packet, callback) {
 
 server.authorizeSubscribe = function (client, topic, callback) {
     if (!isTopicForbidden(topic)) {
-        if (isDeviceHiveEventSubscriptionTopic(topic)) {
-            if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
-                subscribe(client.id, topic)
-                    .then((subscriptionResponse) => {
-                        if (isSubscriptionActual(client.id, topic)) {
-                            unsubscribeFromLessGlobalTopics(client.id, topic);
+        if (isDeviceHiveTopic(topic)) {
+            if (wsManager.isAuthorized(client.id)) {
+                if (isDeviceHiveEventSubscriptionTopic(topic)) {
+                    if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
+                        subscribe(client.id, topic)
+                            .then((subscriptionResponse) => {
+                                if (isSubscriptionActual(client.id, topic)) {
+                                    unsubscribeFromLessGlobalTopics(client.id, topic);
+                                    subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
+                                    callback(null, true);
+                                } else {
+                                    unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
+                                        .then(() => process.nextTick(() => callback(null, false)))
+                                        .catch((err) => process.nextTick(() => console.warn(err)));
+                                }
+                            })
+                            .catch(() => process.nextTick(() => callback(null, false)));
+                    } else {
+                        callback(null, true);
+                    }
 
-                            subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
-                            callback(null, true);
-                        } else {
-                            unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
-                                .then(() => process.nextTick(() => callback(null, false)))
-                                .catch((err) => process.nextTick(() => console.warn(err)));
-                        }
-                    })
-                    .catch(() => process.nextTick(() => callback(null, false)));
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                } else {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                }
             } else {
-                callback(null, true);
+                if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
+                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
+                    callback(null, true);
+                } else {
+                    callback(null, false);
+                }
             }
-
-            subscriptionManager.addSubscriptionAttempt(client.id, topic);
-        } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-            subscriptionManager.addSubscriptionAttempt(client.id, topic);
-            callback(null, true);
         } else {
             callback(null, true);
         }
@@ -116,8 +149,7 @@ server.on('ready', () => {
 });
 
 server.on('clientDisconnected', (client) => {
-    wsFactory.removeSocket(client.id)
-        .catch((err) => console.warn(err));
+    wsManager.close(client.id);
 });
 
 server.on('published', (packet, client) => {
@@ -125,30 +157,25 @@ server.on('published', (packet, client) => {
         const topicStructure = new TopicStructure(packet.topic);
 
         if (topicStructure.isRequest()) {
-            wsFactory.getSocket(client.id)
-                .then((wSocket) => wSocket.sendString(packet.payload.toString()))
-                .catch((err) => console.warn(err));
+            wsManager.sendString(client.id, packet.payload.toString());
         }
     }
 });
 
 server.on('unsubscribed', (topic, client) => {
-    if (isDeviceHiveEventSubscriptionTopic(topic)) {
+    if (isDeviceHiveTopic(topic)) {
         const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
         subscriptionManager.removeSubscriptionAttempt(client.id, topic);
 
-        if (subscriptionId) {
+        if (isDeviceHiveEventSubscriptionTopic(topic) && subscriptionId) {
             unsubscribe(client.id, topic, subscriptionId)
                 .then(() => {
                     subscribeToNextMostGlobalTopic(client.id, topic);
-
                     subscriptionManager.removeSubjectSubscriber(topic, client.id);
                 })
                 .catch((err) => console.warn(err));
         }
-    } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-        subscriptionManager.removeSubscriptionAttempt(client.id, topic);
     }
 });
 
@@ -191,8 +218,7 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function subscribe (clientId, topic) {
-    return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send(DeviceHiveUtils.createSubscriptionDataObject(topic)))
+    return wsManager.send(clientId, DeviceHiveUtils.createSubscriptionDataObject(topic))
         .catch(err => console.warn(err));
 }
 
@@ -205,11 +231,10 @@ function subscribe (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function unsubscribe (clientId, topic, subscriptionId) {
-    return wsFactory.getSocket(clientId)
-        .then((wSocket) => wSocket.send({
+    return wsManager.send(clientId, {
             action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
             subscriptionId: subscriptionId
-        }))
+        })
         .catch(err => console.warn(err));
 }
 
@@ -276,34 +301,41 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
 }
 
 /**
- * Get access and refresh token for by user credentials
- * @param ws {WebSocket} - WebSocket
- * @param login {String} - user login
- * @param password {String} = user password
- * @returns {Promise}
+ * Check that topic is DH topic
+ * @param topic
+ * @return {boolean}
  */
-function createTokenByLoginInfo (ws, login, password) {
-    return ws.send({
-        action: CONST.WS.ACTIONS.TOKEN,
-        login: login,
-        password: password
-    }).then(({ accessToken, refreshToken }) => {
-        ws.setAccessToken(accessToken);
-        ws.setRefreshToken(refreshToken);
-
-        return { accessToken, refreshToken };
-    });
+function isDeviceHiveTopic (topic) {
+    return (new TopicStructure(topic)).isDH();
 }
 
 /**
- * Authenticate user by accessToken
- * @param ws {WebSocket} WebSocket
- * @param accessToken {string}
- * @returns {Promise}
+ * Check that topic is
+ * @param topic
+ * @return {boolean}
  */
-function authenticate (ws, accessToken) {
-    return ws.send({
-        action: CONST.WS.ACTIONS.AUTHENTICATE,
-        token: accessToken
-    })
+function isDeviceHiveTokensOrAuthResponseTopic (topic) {
+    const topicStructure = new TopicStructure(topic);
+    const action = topicStructure.getAction();
+
+    return topicStructure.isDH() && topicStructure.isResponse() &&
+        (action === CONST.TOPICS.PARTS.TOKEN || action === CONST.TOPICS.PARTS.AUTHENTICATE);
+}
+
+/**
+ * Handle token and auth responses
+ * @param messageObject
+ * @param clientId
+ */
+function handleTokenAndAuthResponses (messageObject, clientId) {
+    if (messageObject.status === CONST.WS.SUCCESS_STATUS && wsManager.hasKey(clientId)) {
+        switch (messageObject.action) {
+            case CONST.WS.ACTIONS.TOKEN:
+                wsManager.setTokens(clientId, messageObject.accessToken, messageObject.refreshToken);
+                break;
+            case CONST.WS.ACTIONS.AUTHENTICATE:
+                wsManager.setAuthorized(clientId);
+                break;
+        }
+    }
 }

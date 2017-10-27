@@ -39,7 +39,7 @@ describe(WebSocketFactory.name, () => {
             wsServer.close();
         });
 
-        it(`should fire event: "globalMessage"`, (done) => {
+        it(`should fire event: "message"`, (done) => {
             const wsFactory = new WebSocketFactory(WS_SERVER_URL);
             const checkExpectation = () => {
                 if (wsClient1Spy.calledOnce && wsClient2Spy.calledOnce && wsClient3Spy.calledOnce) {
@@ -50,7 +50,7 @@ describe(WebSocketFactory.name, () => {
             const wsClient2Spy = sinon.spy(checkExpectation);
             const wsClient3Spy = sinon.spy(checkExpectation);
 
-            wsFactory.on(`globalMessage`, (message, client) => {
+            wsFactory.on(`message`, (client, message) => {
                 expect(message.data).to.equal(testMessage);
                 switch (client) {
                     case client1:
@@ -68,37 +68,6 @@ describe(WebSocketFactory.name, () => {
             wsFactory.getSocket(client1);
             wsFactory.getSocket(client2);
             wsFactory.getSocket(client3);
-        });
-    });
-
-    describe(`Locking resource`, () => {
-        let wsServer;
-
-        beforeEach(() => {
-            wsServer = new WebSocketServer({ port: WS_SERVER_PORT });
-
-            wsServer.on(`connection`, (ws) => {
-                ws.on(`message`, (message) => {
-                    ws.send(message);
-                });
-            });
-        });
-
-        afterEach(() => {
-            wsServer.close();
-        });
-
-        it(`should remove WebSocket only after unlocking`, (done) => {
-            const wsFactory = new WebSocketFactory(WS_SERVER_URL);
-
-            wsFactory.on(`globalMessage`, (message, client) => {
-                expect(message.data).to.equal(testMessage);
-                expect(client).to.equal(client1);
-                expect(wsFactory.hasSocket(client1)).to.equal(true);
-            });
-
-            wsFactory.getSocket(client1).then(wsClient => wsClient.sendString(testMessage));
-            wsFactory.removeSocket(client1).then(() => done());
         });
     });
 });

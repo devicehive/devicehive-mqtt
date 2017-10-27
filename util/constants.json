@@ -3,13 +3,21 @@
   "DEV": "dev",
   "MQTT": {
     "PORT": 1883,
+    "TLS_PORT": 8443,
     "WILDCARDS": [
       "+",
       "#"
     ]
   },
+  "PERSISTENCE": {
+    "REDIS_DEV_HOST": "localhost",
+    "REDIS_DEV_PORT": "6379",
+    "MAX_NUMBER_OF_SUBSCRIPTIONS": 600000,
+    "MAX_NUMBER_OF_PACKETS": 600000
+  },
   "WS": {
     "DEV_HOST": "ws://playground.dev.devicehive.com/api/websocket",
+    "SUCCESS_STATUS": "success",
     "ACTIONS": {
       "AUTHENTICATE": "authenticate",
       "TOKEN": "token",
@@ -24,14 +32,16 @@
   },
   "TOPICS": {
     "TOKEN": "dh/request/token",
-    "AUTHENTICATION": "dh/request/authentication",
+    "AUTHENTICATE": "dh/request/authenticate",
     "PARTS": {
       "DH": "dh",
       "RESPONSE": "response",
       "REQUEST": "request",
       "NOTIFICATION": "notification",
       "COMMAND": "command",
-      "COMMAND_UPDATE": "command_update"
+      "COMMAND_UPDATE": "command_update",
+      "TOKEN": "token",
+      "AUTHENTICATE": "authenticate"
     },
     "FORBIDDEN": {
       "START_WITH": [
