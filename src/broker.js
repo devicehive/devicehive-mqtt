@@ -1,5 +1,7 @@
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
+const debug = require(`debug`)(`broker`);
+const appLogger = require(`../util/ApplicationLogger.js`);
 const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
@@ -15,13 +17,14 @@ const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
 const WS_SERVER_URL = process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
+const BROKER_PORT = process.env.BROKER_PORT || CONST.MQTT.DEFAULT_PORT;
 const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.REDIS_DEV_HOST;
 const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
 
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
 const server = new mosca.Server({
-    port: CONST.MQTT.PORT,
+    port: BROKER_PORT,
     persistence: {
         factory: mosca.persistence.Redis,
         host: REDIS_SERVER_HOST,
@@ -54,6 +57,8 @@ wsManager.on('message', (clientId, message) => {
                             topic: TopicStructure.toTopicString(messageObject),
                             payload: message.data
                         });
+
+                        appLogger.info(`broker has published to topic: "${topic}"`);
                     }))();
                 }
             }
@@ -66,99 +71,80 @@ wsManager.on('message', (clientId, message) => {
                 topic: topic,
                 payload: message.data
             });
+
+            appLogger.info(`broker has published to private topic: "${topic}"`);
         }
     }
 });
 
 server.authenticate = function (client, username, password, callback) {
-    if (!wsManager.hasKey(client.id)) {
-        if (username && password) {
-            wsManager.createTokens(client.id, username, password.toString())
-                .then(({ accessToken, refreshToken }) => wsManager.authenticate(client.id, accessToken))
-                .then(() => process.nextTick(() => callback(null, true)))
-                .catch((err) => process.nextTick(() => callback(null, false)));
-        } else {
+    brokerAuthenticationHandler(client.id, username, password)
+        .then(() => {
+            appLogger.info(`client with id: "${client.id}" has been authenticated`);
             callback(null, true);
-        }
-    } else {
-        callback(null, false);
-    }
+        })
+        .catch((err) => {
+            appLogger.warn(`client with id: "${client.id}" has not been authenticated. Reason: ${err.toString()}`);
+            callback(err, false);
+        });
 };
 
 server.authorizePublish = function (client, topic, payload, callback) {
     const topicStructure = new TopicStructure(topic);
+    const isAuthorized = topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true;
 
-    callback(null, topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true);
+    isAuthorized === true ?
+        appLogger.info(`client with id: "${client.id}" has been authorized for publishing in to the topic: "${topic}"`) :
+        appLogger.warn(`client with id: "${client.id}" has not been authorized for publishing in to the topic: "${topic}"`);
+
+    callback(null, isAuthorized);
 };
 
 server.authorizeForward = function (client, packet, callback) {
     const topicStructure = new TopicStructure(packet.topic);
+    const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
 
-    callback(null, topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true);
+    isAuthorized === true ?
+        appLogger.info(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
+        appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${packet.topic}"`);
+
+    callback(null, isAuthorized);
 };
 
 server.authorizeSubscribe = function (client, topic, callback) {
-    if (!isTopicForbidden(topic)) {
-        if (isDeviceHiveTopic(topic)) {
-            if (wsManager.isAuthorized(client.id)) {
-                if (isDeviceHiveEventSubscriptionTopic(topic)) {
-                    if (!hasMoreGlobalTopicAttempts(client.id, topic)) {
-                        subscribe(client.id, topic)
-                            .then((subscriptionResponse) => {
-                                if (isSubscriptionActual(client.id, topic)) {
-                                    unsubscribeFromLessGlobalTopics(client.id, topic);
-                                    subscriptionManager.addSubjectSubscriber(topic, client.id, subscriptionResponse.subscriptionId);
-                                    callback(null, true);
-                                } else {
-                                    unsubscribe(client.id, topic, subscriptionResponse.subscriptionId)
-                                        .then(() => process.nextTick(() => callback(null, false)))
-                                        .catch((err) => process.nextTick(() => console.warn(err)));
-                                }
-                            })
-                            .catch(() => process.nextTick(() => callback(null, false)));
-                    } else {
-                        callback(null, true);
-                    }
-
-                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
-                } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
-                    callback(null, true);
-                } else {
-                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
-                    callback(null, true);
-                }
-            } else {
-                if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
-                    subscriptionManager.addSubscriptionAttempt(client.id, topic);
-                    callback(null, true);
-                } else {
-                    callback(null, false);
-                }
-            }
-        } else {
+    brokerAuthorizeSubscriptionHandler(client.id, topic)
+        .then(() => {
+            appLogger.info(`client with id: "${client.id}" has been subscribed for topic: "${topic}"`);
             callback(null, true);
-        }
-    } else {
-        callback(null, false);
-    }
+        })
+        .catch((err) => {
+            appLogger.warn(`client with id: "${client.id}" has not been subscribed for topic: "${topic}". Reason: ${err.toString()}`);
+            callback(null, false);
+        });
 };
 
-server.on('ready', () => {
-    console.log('MQTT Broker has been started');
+server.on(`ready`, () => {
+    appLogger.info(`broker has been started on port: ${BROKER_PORT}`);
 });
 
-server.on('clientDisconnected', (client) => {
+server.on(`clientConnected`, (client) => {
+    appLogger.info(`client with id: "${client.id}" connected`);
+});
+
+server.on(`clientDisconnected`, (client) => {
     wsManager.close(client.id);
+    appLogger.info(`client with id: "${client.id}" disconnected`);
 });
 
-server.on('published', (packet, client) => {
+server.on(`published`, (packet, client) => {
     if (client) {
         const topicStructure = new TopicStructure(packet.topic);
 
         if (topicStructure.isRequest()) {
             wsManager.sendString(client.id, packet.payload.toString());
         }
+
+        appLogger.info(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);
     }
 });
 
@@ -173,9 +159,15 @@ server.on('unsubscribed', (topic, client) => {
                 .then(() => {
                     subscribeToNextMostGlobalTopic(client.id, topic);
                     subscriptionManager.removeSubjectSubscriber(topic, client.id);
+
+                    appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
                 })
-                .catch((err) => console.warn(err));
+                .catch((err) => appLogger.warn(`client with id: "${client.id}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
+        } else {
+            appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
         }
+    } else {
+        appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
     }
 });
 
@@ -218,8 +210,7 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
  * @returns {Promise.<Object>}
  */
 function subscribe (clientId, topic) {
-    return wsManager.send(clientId, DeviceHiveUtils.createSubscriptionDataObject(topic))
-        .catch(err => console.warn(err));
+    return wsManager.send(clientId, DeviceHiveUtils.createSubscriptionDataObject(topic));
 }
 
 /**
@@ -232,10 +223,9 @@ function subscribe (clientId, topic) {
  */
 function unsubscribe (clientId, topic, subscriptionId) {
     return wsManager.send(clientId, {
-            action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
-            subscriptionId: subscriptionId
-        })
-        .catch(err => console.warn(err));
+        action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
+        subscriptionId: subscriptionId
+    });
 }
 
 /**
@@ -285,7 +275,9 @@ function subscribeToNextMostGlobalTopic (clientId, topic) {
         subscribe(clientId, nextMostGlobalTopic)
             .then((subscriptionResponse) => subscriptionManager.addSubjectSubscriber(
                 nextMostGlobalTopic, clientId, subscriptionResponse.subscriptionId))
-            .catch((err) => console.warn(err));
+            .catch((err) => {
+                appLogger.warn(``)
+            });
     }
 }
 
@@ -338,4 +330,88 @@ function handleTokenAndAuthResponses (messageObject, clientId) {
                 break;
         }
     }
+}
+
+/**
+ *
+ * @param clientId
+ * @param username
+ * @param password
+ * @return {Promise}
+ */
+function brokerAuthenticationHandler (clientId, username, password) {
+    return new Promise((resolve, reject) => {
+        if (!wsManager.hasKey(clientId)) {
+            if (username && password) {
+                wsManager.createTokens(clientId, username, password.toString())
+                    .then(({ accessToken, refreshToken }) => wsManager.authenticate(clientId, accessToken))
+                    .then(() => process.nextTick(() => resolve()))
+                    .catch((err) => process.nextTick(() => {
+                        wsManager.close(clientId);
+                        reject(err);
+                    }));
+            } else {
+                resolve();
+            }
+        } else {
+            reject(new Error(`User with id ${clientId} already connected`));
+        }
+    });
+}
+
+/**
+ *
+ * @param clientId
+ * @param topic
+ * @return {Promise}
+ */
+function brokerAuthorizeSubscriptionHandler (clientId, topic) {
+    return new Promise((resolve, reject) => {
+        if (!isTopicForbidden(topic)) {
+            if (isDeviceHiveTopic(topic)) {
+                if (wsManager.isAuthorized(clientId)) {
+                    if (isDeviceHiveEventSubscriptionTopic(topic)) {
+                        if (!hasMoreGlobalTopicAttempts(clientId, topic)) {
+                            subscribe(clientId, topic)
+                                .then((subscriptionResponse) => {
+                                    if (isSubscriptionActual(clientId, topic)) {
+                                        unsubscribeFromLessGlobalTopics(clientId, topic);
+                                        subscriptionManager.addSubjectSubscriber(topic, clientId, subscriptionResponse.subscriptionId);
+                                        resolve();
+                                    } else {
+                                        unsubscribe(clientId, topic, subscriptionResponse.subscriptionId)
+                                            .then(() => process.nextTick(() => reject(`Subscription is not actual anymore`)))
+                                            .catch((err) => process.nextTick(() => {
+                                                appLogger.warn(`Problem while unsubscribing client from not actual topic "${topic}". Reason: ${err.toString()}`);
+                                            }));
+                                    }
+                                })
+                                .catch((err) => process.nextTick(() => reject(err)));
+                        } else {
+                            resolve();
+                        }
+
+                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
+                    } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
+                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
+                        resolve();
+                    } else {
+                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
+                        resolve();
+                    }
+                } else {
+                    if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
+                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
+                        resolve();
+                    } else {
+                        reject(`Topic "${topic}" is forbidden for subscription for not authorized clients`);
+                    }
+                }
+            } else {
+                resolve();
+            }
+        } else {
+            reject(`Topic "${topic}" is forbidden for subscription`);
+        }
+    });
 }

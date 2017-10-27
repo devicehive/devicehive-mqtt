@@ -2,8 +2,8 @@
   "CLIENT_ID_TOPIC_SPLITTER": "@",
   "DEV": "dev",
   "MQTT": {
-    "PORT": 1883,
-    "TLS_PORT": 8443,
+    "DEFAULT_PORT": 1883,
+    "TLS_DEFAULT_PORT": 8443,
     "WILDCARDS": [
       "+",
       "#"

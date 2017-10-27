@@ -1,4 +1,5 @@
 const CONST = require('./constants.json');
+const debug = require(`debug`)(`devicehiveutil`);
 const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 
