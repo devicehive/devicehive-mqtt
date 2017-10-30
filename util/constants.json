@@ -7,7 +7,19 @@
     "WILDCARDS": [
       "+",
       "#"
-    ]
+    ],
+    "SYS_PREFIX": "$SYS",
+    "BROKER_STATS_TOPICS": {
+      "START_AT":"started_at",
+      "UPTIME":"uptime",
+      "CLIENTS_MAXIMUM":"clients/maximum",
+      "CLIENTS_CONNECTED":"clients/connected",
+      "PUBLISH_RECEIVED":"publish/received",
+      "LOAD_CONNECTIONS":"load/connections/5min",
+      "LOAD_PUBLISH_RECEIVED":"load/publish/received/5min",
+      "MEMORY_HEAP_CURRENT":"memory/heap/current",
+      "MEMORY_HEAP_MAXIMUM":"memory/heap/maximum"
+    }
   },
   "PERSISTENCE": {
     "REDIS_DEV_HOST": "localhost",

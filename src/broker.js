@@ -1,7 +1,7 @@
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
-const debug = require(`debug`)(`broker`);
-const appLogger = require(`../util/ApplicationLogger.js`);
+const ApplicationLogger = require(`./ApplicationLogger.js`);
+const BrokerProcessMonitoring = require(`./BrokerProcessMonitoring.js`);
 const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
@@ -13,6 +13,9 @@ const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
  * WS_SERVER_URL - path to Web Socket server
  * REDIS_SERVER_HOST - Redis storage host
  * REDIS_SERVER_PORT - Redis storage port
+ * DEBUG - to enable modules logging
+ * APP_LOG_LEVEL - application logger level
+ * ENABLE_PM - enable process monitoring
  */
 
 const IS_DEV = process.env.NODE_ENV === CONST.DEV;
@@ -21,10 +24,13 @@ const BROKER_PORT = process.env.BROKER_PORT || CONST.MQTT.DEFAULT_PORT;
 const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.REDIS_DEV_HOST;
 const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
 
+const appLogger = new ApplicationLogger();
+const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
 const server = new mosca.Server({
     port: BROKER_PORT,
+    stats: true,
     persistence: {
         factory: mosca.persistence.Redis,
         host: REDIS_SERVER_HOST,
@@ -58,7 +64,7 @@ wsManager.on('message', (clientId, message) => {
                             payload: message.data
                         });
 
-                        appLogger.info(`broker has published to topic: "${topic}"`);
+                        appLogger.debug(`broker has published to topic: "${topic}"`);
                     }))();
                 }
             }
@@ -72,7 +78,7 @@ wsManager.on('message', (clientId, message) => {
                 payload: message.data
             });
 
-            appLogger.info(`broker has published to private topic: "${topic}"`);
+            appLogger.debug(`broker has published to private topic: "${topic}"`);
         }
     }
 });
@@ -80,7 +86,7 @@ wsManager.on('message', (clientId, message) => {
 server.authenticate = function (client, username, password, callback) {
     brokerAuthenticationHandler(client.id, username, password)
         .then(() => {
-            appLogger.info(`client with id: "${client.id}" has been authenticated`);
+            appLogger.debug(`client with id: "${client.id}" has been authenticated`);
             callback(null, true);
         })
         .catch((err) => {
@@ -94,7 +100,7 @@ server.authorizePublish = function (client, topic, payload, callback) {
     const isAuthorized = topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true;
 
     isAuthorized === true ?
-        appLogger.info(`client with id: "${client.id}" has been authorized for publishing in to the topic: "${topic}"`) :
+        appLogger.debug(`client with id: "${client.id}" has been authorized for publishing in to the topic: "${topic}"`) :
         appLogger.warn(`client with id: "${client.id}" has not been authorized for publishing in to the topic: "${topic}"`);
 
     callback(null, isAuthorized);
@@ -105,7 +111,7 @@ server.authorizeForward = function (client, packet, callback) {
     const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
 
     isAuthorized === true ?
-        appLogger.info(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
+        appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
         appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${packet.topic}"`);
 
     callback(null, isAuthorized);
@@ -114,7 +120,7 @@ server.authorizeForward = function (client, packet, callback) {
 server.authorizeSubscribe = function (client, topic, callback) {
     brokerAuthorizeSubscriptionHandler(client.id, topic)
         .then(() => {
-            appLogger.info(`client with id: "${client.id}" has been subscribed for topic: "${topic}"`);
+            appLogger.debug(`client with id: "${client.id}" has been subscribed for topic: "${topic}"`);
             callback(null, true);
         })
         .catch((err) => {
@@ -144,7 +150,11 @@ server.on(`published`, (packet, client) => {
             wsManager.sendString(client.id, packet.payload.toString());
         }
 
-        appLogger.info(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);
+        appLogger.debug(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);
+    } else {
+        if (isBrokerSYSTopic(packet.topic)) {
+            brokerProcessMonitoring.updateMetric(convertTopicToMetricName(packet.topic), packet.payload.toString());
+        }
     }
 });
 
@@ -160,14 +170,14 @@ server.on('unsubscribed', (topic, client) => {
                     subscribeToNextMostGlobalTopic(client.id, topic);
                     subscriptionManager.removeSubjectSubscriber(topic, client.id);
 
-                    appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
+                    appLogger.debug(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
                 })
                 .catch((err) => appLogger.warn(`client with id: "${client.id}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
         } else {
-            appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
+            appLogger.debug(`client with id: "${client.id}" has unsubscribed from DeviceHive topic: ${topic}`);
         }
     } else {
-        appLogger.info(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
+        appLogger.debug(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
     }
 });
 
@@ -243,7 +253,7 @@ function unsubscribeFromLessGlobalTopics (clientId, topic) {
             if (subscriptionId) {
                 unsubscribe(clientId, topicToUnsubscribe, subscriptionId)
                     .then(() => subscriptionManager.removeSubjectSubscriber(topicToUnsubscribe, clientId))
-                    .catch((err) => console.warn(err));
+                    .catch((err) => appLogger.warn(`client with id: "${clientid}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
             }
         });
 }
@@ -275,9 +285,7 @@ function subscribeToNextMostGlobalTopic (clientId, topic) {
         subscribe(clientId, nextMostGlobalTopic)
             .then((subscriptionResponse) => subscriptionManager.addSubjectSubscriber(
                 nextMostGlobalTopic, clientId, subscriptionResponse.subscriptionId))
-            .catch((err) => {
-                appLogger.warn(``)
-            });
+            .catch((err) => appLogger.warn(`client with id: "${clientId}" has problems with subscribing for topic: ${topic}: ${err.toString()}`));
     }
 }
 
@@ -414,4 +422,22 @@ function brokerAuthorizeSubscriptionHandler (clientId, topic) {
             reject(`Topic "${topic}" is forbidden for subscription`);
         }
     });
+}
+
+/**
+ * Check if topic is broker system message
+ * @param topic
+ * @return {boolean}
+ */
+function isBrokerSYSTopic (topic) {
+    return topic.startsWith(`${CONST.MQTT.SYS_PREFIX}/${server.id}`);
+}
+
+/**
+ * Convert system status topic to metric name
+ * @param topic
+ * @return {string}
+ */
+function convertTopicToMetricName(topic) {
+    return topic.split(`${CONST.MQTT.SYS_PREFIX}/${server.id}/`)[1];
 }
