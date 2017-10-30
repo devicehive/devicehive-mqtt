@@ -10,6 +10,7 @@ const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 /**
  * Environmental variables
  * NODE_ENV - "dev" for development
+ * BROKER_PORT - port on wich broker will start
  * WS_SERVER_URL - path to Web Socket server
  * REDIS_SERVER_HOST - Redis storage host
  * REDIS_SERVER_PORT - Redis storage port
@@ -29,7 +30,7 @@ const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
 const server = new mosca.Server({
-    port: BROKER_PORT,
+    port: Number(BROKER_PORT),
     stats: true,
     persistence: {
         factory: mosca.persistence.Redis,
@@ -39,6 +40,13 @@ const server = new mosca.Server({
             subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
             packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
         }
+    },
+    backend: {
+        type: 'redis',
+        db: 12,
+        port: REDIS_SERVER_PORT,
+        host: REDIS_SERVER_HOST,
+        return_buffers: true
     }
 });
 
@@ -108,7 +116,8 @@ server.authorizePublish = function (client, topic, payload, callback) {
 
 server.authorizeForward = function (client, packet, callback) {
     const topicStructure = new TopicStructure(packet.topic);
-    const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
+    const isMessageFromThisBroker = topicStructure.isDH() ? wsManager.hasKey(client.id) : true;
+    const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : isMessageFromThisBroker;
 
     isAuthorized === true ?
         appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
