@@ -40,13 +40,6 @@ const server = new mosca.Server({
             subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
             packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
         }
-    },
-    backend: {
-        type: 'redis',
-        db: 12,
-        port: REDIS_SERVER_PORT,
-        host: REDIS_SERVER_HOST,
-        return_buffers: true
     }
 });
 
@@ -116,8 +109,7 @@ server.authorizePublish = function (client, topic, payload, callback) {
 
 server.authorizeForward = function (client, packet, callback) {
     const topicStructure = new TopicStructure(packet.topic);
-    const isMessageFromThisBroker = topicStructure.isDH() ? wsManager.hasKey(client.id) : true;
-    const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : isMessageFromThisBroker;
+    const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
 
     isAuthorized === true ?
         appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
