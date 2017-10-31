@@ -1,6 +1,7 @@
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
 const ApplicationLogger = require(`./ApplicationLogger.js`);
+const CrossBrokerCommunicator = require(`./CrossBrokerCommunicator.js`);
 const BrokerProcessMonitoring = require(`./BrokerProcessMonitoring.js`);
 const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
@@ -26,6 +27,7 @@ const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.RED
 const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
 
 const appLogger = new ApplicationLogger();
+const crossBrokerCommunicator = new CrossBrokerCommunicator();
 const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(WS_SERVER_URL);
@@ -43,6 +45,7 @@ const server = new mosca.Server({
     }
 });
 
+crossBrokerCommunicator.on(`message`, (topic, payload) => server.publish({ topic: topic, payload: payload }));
 
 wsManager.on('message', (clientId, message) => {
     const messageObject = JSON.parse(message.data);
@@ -147,8 +150,12 @@ server.on(`published`, (packet, client) => {
     if (client) {
         const topicStructure = new TopicStructure(packet.topic);
 
-        if (topicStructure.isRequest()) {
-            wsManager.sendString(client.id, packet.payload.toString());
+        if (topicStructure.isDH()) {
+            if (topicStructure.isRequest()) {
+                wsManager.sendString(client.id, packet.payload.toString());
+            }
+        } else {
+            crossBrokerCommunicator.publish(packet.topic, packet.payload.toString());
         }
 
         appLogger.debug(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);

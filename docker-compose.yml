@@ -2,6 +2,10 @@ version: '3'
 services:
   broker1:
     build: .
+    container_name: broker1
+    networks:
+      - cote
+      - redis
     environment:
       - NODE_ENV=prod
       - BROKER_PORT=1883
@@ -9,12 +13,15 @@ services:
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
+      - APP_LOG_LEVEL=debug
     ports:
       - "1883:1883"
-    links:
-      - redis
   broker2:
     build: .
+    container_name: broker2
+    networks:
+      - cote
+      - redis
     environment:
       - NODE_ENV=prod
       - BROKER_PORT=1883
@@ -22,12 +29,15 @@ services:
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
+      - APP_LOG_LEVEL=debug
     ports:
       - "1884:1883"
-    links:
-      - redis
   broker3:
     build: .
+    container_name: broker3
+    networks:
+      - cote
+      - redis
     environment:
       - NODE_ENV=prod
       - BROKER_PORT=1883
@@ -35,9 +45,32 @@ services:
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
+      - APP_LOG_LEVEL=debug
     ports:
       - "1885:1883"
-    links:
+  broker4:
+    build: .
+    container_name: broker4
+    networks:
+      - cote
       - redis
+    environment:
+      - NODE_ENV=prod
+      - BROKER_PORT=1883
+      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+      - ENABLE_PM=false
+      - APP_LOG_LEVEL=debug
+    ports:
+      - "1886:1883"
   redis:
     image: "redis:alpine"
+    container_name: redis
+    networks:
+      - redis
+networks:
+  redis:
+    driver: bridge
+  cote:
+    driver: bridge
