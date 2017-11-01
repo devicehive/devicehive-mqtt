@@ -349,7 +349,7 @@ function handleTokenAndAuthResponses (messageObject, clientId) {
 }
 
 /**
- *
+ * Client authentication handler
  * @param clientId
  * @param username
  * @param password
@@ -376,7 +376,7 @@ function brokerAuthenticationHandler (clientId, username, password) {
 }
 
 /**
- *
+ * Client subscription authorization handler
  * @param clientId
  * @param topic
  * @return {Promise}
