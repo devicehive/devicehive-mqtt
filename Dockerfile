@@ -1,4 +1,4 @@
-FROM node:8.1.4-alpine
+FROM node:8.7.0-alpine
 ENV WORK_DIR=/usr/src/app/
 RUN mkdir -p ${WORK_DIR} \
     && cd ${WORK_DIR}
@@ -15,5 +15,7 @@ COPY . ${WORK_DIR}
 RUN npm install \
     && apk del .gyp
 
+RUN npm install pm2 -g
+
 EXPOSE 1883
-CMD ["node", "src/broker.js"]
+CMD ["pm2-docker", "src/broker.js"]
