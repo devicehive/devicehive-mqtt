@@ -1,0 +1,64 @@
+{
+  "CLIENT_ID_TOPIC_SPLITTER": "@",
+  "DEV": "dev",
+  "MQTT": {
+    "DEFAULT_PORT": 1883,
+    "TLS_DEFAULT_PORT": 8443,
+    "WILDCARDS": [
+      "+",
+      "#"
+    ],
+    "SYS_PREFIX": "$SYS",
+    "BROKER_STATS_TOPICS": {
+      "START_AT":"started_at",
+      "UPTIME":"uptime",
+      "CLIENTS_MAXIMUM":"clients/maximum",
+      "CLIENTS_CONNECTED":"clients/connected",
+      "PUBLISH_RECEIVED":"publish/received",
+      "LOAD_CONNECTIONS":"load/connections/5min",
+      "LOAD_PUBLISH_RECEIVED":"load/publish/received/5min",
+      "MEMORY_HEAP_CURRENT":"memory/heap/current",
+      "MEMORY_HEAP_MAXIMUM":"memory/heap/maximum"
+    }
+  },
+  "PERSISTENCE": {
+    "REDIS_DEV_HOST": "localhost",
+    "REDIS_DEV_PORT": "6379",
+    "MAX_NUMBER_OF_SUBSCRIPTIONS": 600000,
+    "MAX_NUMBER_OF_PACKETS": 600000
+  },
+  "WS": {
+    "DEV_HOST": "ws://playground.devicehive.com/api/websocket",
+    "SUCCESS_STATUS": "success",
+    "ACTIONS": {
+      "AUTHENTICATE": "authenticate",
+      "TOKEN": "token",
+      "NOTIFICATION_SUBSCRIBE": "notification/subscribe",
+      "NOTIFICATION_UNSUBSCRIBE": "notification/unsubscribe",
+      "NOTIFICATION_INSERT": "notification/insert",
+      "COMMAND_SUBSCRIBE": "command/subscribe",
+      "COMMAND_UNSUBSCRIBE": "command/unsubscribe",
+      "COMMAND_INSERT": "command/insert",
+      "COMMAND_UPDATE": "command/update"
+    }
+  },
+  "TOPICS": {
+    "TOKEN": "dh/request/token",
+    "AUTHENTICATE": "dh/request/authenticate",
+    "PARTS": {
+      "DH": "dh",
+      "RESPONSE": "response",
+      "REQUEST": "request",
+      "NOTIFICATION": "notification",
+      "COMMAND": "command",
+      "COMMAND_UPDATE": "command_update",
+      "TOKEN": "token",
+      "AUTHENTICATE": "authenticate"
+    },
+    "FORBIDDEN": {
+      "START_WITH": [
+        "dh/request"
+      ]
+    }
+  }
+}
