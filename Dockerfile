@@ -5,17 +5,14 @@ RUN mkdir -p ${WORK_DIR} \
 
 WORKDIR ${WORK_DIR}
 
-RUN apk add --no-cache --virtual .gyp \
-        python \
-        make \
-        g++
-
 COPY . ${WORK_DIR}
 
-RUN npm install \
-    && apk del .gyp
-
-RUN npm install pm2 -g
+RUN apk add --no-cache --virtual .gyp \
+        python make  g++ \
+  && npm install \
+  && apk del .gyp \
+  && npm install pm2 -g \
+  && npm cache clean --force
 
 EXPOSE 1883
 CMD ["pm2-docker", "src/broker.js"]
