@@ -1,4 +1,4 @@
-FROM node:8.7.0-alpine
+FROM node:8.9.3-alpine
 ENV WORK_DIR=/usr/src/app/
 RUN mkdir -p ${WORK_DIR} \
     && cd ${WORK_DIR}
