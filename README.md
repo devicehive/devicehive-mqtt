@@ -146,11 +146,13 @@ To receive responses of request the MQTT client should subscribe to the response
 Where _requestAction_ ia a request action (**user/get**, **device/delete**, **token/refresh etc.**)
 Response topic should be always private (e.g. with client ID mentioned)
 
-The MQTT client is able to subscribe to the notification/command topic to receive notification/command push messages
+The MQTT client is able to subscribe to the notification/command/command_update topic to receive notification/command/command_update push messages
 
     dh/notification/<networkID>/<deviceID>/<notificationName>[@<clientID>]
         
     dh/command/<networkID>/<deviceID>/<commandName>[@<clientID>]
+    
+    dh/command_update/<networkID>/<deviceID>/<commandName>[@<clientID>]
 
 Where: 
 - networkID - id of the network
