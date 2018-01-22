@@ -14,16 +14,19 @@ class DeviceHiveUtils {
      */
     static createSubscriptionDataObject (topic) {
         const topicStructure = new TopicStructure(topic);
-        const result = {
-            action: DeviceHiveUtils.getTopicSubscribeRequestAction(topic),
-            networkIds: topicStructure.getDevice().length > 0 ? [] : [topicStructure.getNetwork()],
-            deviceIds: topicStructure.getDevice() ? [topicStructure.getDevice()] : [],
-            names: topicStructure.getName() ? [topicStructure.getName()] : []
-        };
+        const result = {};
+        const action = DeviceHiveUtils.getTopicSubscribeRequestAction(topic);
+        const networkIds = topicStructure.getNetworkIds();
+        const deviceTypeIds = topicStructure.getDeviceTypeIds();
+        const deviceId = topicStructure.getDevice();
+        const names = topicStructure.getNames();
 
-        if (topicStructure.isCommandUpdate()) {
-            result.returnUpdatedCommands = true
-        }
+        if (action) { result.action = action; }
+        if (networkIds) { result.networkIds = networkIds; }
+        if (deviceTypeIds) { result.deviceTypeIds = deviceTypeIds; }
+        if (deviceId) { result.deviceId = deviceId; }
+        if (names) { result.names = names; }
+        if (topicStructure.isCommandUpdate()) { result.returnUpdatedCommands = true; }
 
         return result;
     }

@@ -26,38 +26,35 @@ describe(DeviceHiveUtils.name, () => {
 
     describe(`Static method: ${staticMethodsNames.createSubscriptionDataObject}`, () => {
         const expectationObject1 = {
-            topic: `dh/notification/12276/deviceId/name`,
+            topic: `dh/notification/12276/1/deviceId/name`,
             expectation: {
                 action: `notification/subscribe`,
-                networkIds: [],
-                deviceIds: [`deviceId`],
+                deviceId: `deviceId`,
                 names: [`name`]
             }
         };
         const expectationObject2 = {
-            topic: `dh/notification/+/deviceId/#`,
+            topic: `dh/notification/+/1/deviceId/#`,
             expectation: {
                 action: `notification/subscribe`,
-                networkIds: [],
-                deviceIds: [`deviceId`],
-                names: []
+                deviceId: `deviceId`
             }
         };
         const expectationObject3 = {
-            topic: `dh/command/12276/+/temperature`,
+            topic: `dh/command/12276/1/+/temperature`,
             expectation: {
                 action: `command/subscribe`,
                 networkIds: [`12276`],
-                deviceIds: [],
+                deviceTypeIds: [`1`],
                 names: [`temperature`]
             }
         };
         const expectationObject4 = {
-            topic: `dh/command_update/12276/+/temperature`,
+            topic: `dh/command_update/12276/1/+/temperature`,
             expectation: {
                 action: `command/subscribe`,
                 networkIds: [`12276`],
-                deviceIds: [],
+                deviceTypeIds: [`1`],
                 names: [`temperature`],
                 returnUpdatedCommands: true
             }
@@ -87,8 +84,8 @@ describe(DeviceHiveUtils.name, () => {
     describe(`Static method: ${staticMethodsNames.isSameTopicRoot}`, () => {
         const topic1 = `dh/request`;
         const topic2 = `dh/response`;
-        const topic3 = `dh/notification/1227/deviceId/#`;
-        const topic4 = `dh/notification/+/deviceId/#`;
+        const topic3 = `dh/notification/1227/1/deviceId/#`;
+        const topic4 = `dh/notification/+/1/deviceId/#`;
         const topic5 = `dh/#`;
 
         it(`"${topic1}" and "${topic2}" has different topic root`, () => {
@@ -109,10 +106,10 @@ describe(DeviceHiveUtils.name, () => {
     });
 
     describe(`Static method: ${staticMethodsNames.isLessGlobalTopic}`, () => {
-        const topic1 = `dh/notification/1227/deviceId/#`;
-        const topic2 = `dh/notification/+/deviceId/#`;
+        const topic1 = `dh/notification/1227/1/deviceId/#`;
+        const topic2 = `dh/notification/+/1/deviceId/#`;
         const topic3 = `dh/notification/#`;
-        const topic4 = `dh/command_update/+/deviceId/#`;
+        const topic4 = `dh/command_update/+/1/deviceId/#`;
         const topic5 = `dh/#`;
         const topic6 = `dh/notification/+`;
 
@@ -138,10 +135,10 @@ describe(DeviceHiveUtils.name, () => {
     });
 
     describe(`Static method: ${staticMethodsNames.isMoreGlobalTopic}`, () => {
-        const topic1 = `dh/notification/1227/deviceId/#`;
-        const topic2 = `dh/notification/+/deviceId/#`;
+        const topic1 = `dh/notification/1227/1/deviceId/#`;
+        const topic2 = `dh/notification/+/1/deviceId/#`;
         const topic3 = `dh/notification/#`;
-        const topic4 = `dh/command_update/+/deviceId/#`;
+        const topic4 = `dh/command_update/+/1/deviceId/#`;
         const topic5 = `dh/#`;
         const topic6 = `dh/notification/+`;
 
@@ -167,9 +164,9 @@ describe(DeviceHiveUtils.name, () => {
     });
 
     describe(`Static method: ${staticMethodsNames.getTopicSubscribeRequestAction}`, () => {
-        const expectation1 = [`dh/notification/1227/deviceId/name`, `notification/subscribe`];
-        const expectation2 = [`dh/command/1227/deviceId/name`, `command/subscribe`];
-        const expectation3 = [`dh/command_update/1227/deviceId/name`, `command/subscribe`];
+        const expectation1 = [`dh/notification/1227/1/deviceId/name`, `notification/subscribe`];
+        const expectation2 = [`dh/command/1227/1/deviceId/name`, `command/subscribe`];
+        const expectation3 = [`dh/command_update/1227/1/deviceId/name`, `command/subscribe`];
         const expectation4 = [`dh/response/notification`, ``];
 
         it(`Action for "${expectation1[0]}" should be "${expectation1[1]}"`, () => {
@@ -190,9 +187,9 @@ describe(DeviceHiveUtils.name, () => {
     });
 
     describe(`Static method: ${staticMethodsNames.getTopicUnsubscribeRequestAction}`, () => {
-        const expectation1 = [`dh/notification/1227/deviceId/name`, `notification/unsubscribe`];
-        const expectation2 = [`dh/command/1227/deviceId/name`, `command/unsubscribe`];
-        const expectation3 = [`dh/command_update/1227/deviceId/name`, `command/unsubscribe`];
+        const expectation1 = [`dh/notification/1227/1/deviceId/name`, `notification/unsubscribe`];
+        const expectation2 = [`dh/command/1227/1/deviceId/name`, `command/unsubscribe`];
+        const expectation3 = [`dh/command_update/1227/1/deviceId/name`, `command/unsubscribe`];
         const expectation4 = [`dh/response/notification`, ``];
 
         it(`Action for "${expectation1[0]}" should be "${expectation1[1]}"`, () => {
@@ -213,9 +210,9 @@ describe(DeviceHiveUtils.name, () => {
     });
 
     describe(`Static method: ${staticMethodsNames.getTopicSubscriptionResponseAction}`, () => {
-        const expectation1 = [`dh/notification/1227/deviceId/name`, `notification/insert`];
-        const expectation2 = [`dh/command/1227/deviceId/name`, `command/insert`];
-        const expectation3 = [`dh/command_update/1227/deviceId/name`, `command/update`];
+        const expectation1 = [`dh/notification/1227/1/deviceId/name`, `notification/insert`];
+        const expectation2 = [`dh/command/1227/1/deviceId/name`, `command/insert`];
+        const expectation3 = [`dh/command_update/1227/1/deviceId/name`, `command/update`];
         const expectation4 = [`dh/request/notification`, ``];
 
         it(`Action for "${expectation1[0]}" should be "${expectation1[1]}"`, () => {

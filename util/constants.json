@@ -28,7 +28,6 @@
     "MAX_NUMBER_OF_PACKETS": 600000
   },
   "WS": {
-    "DEV_HOST": "ws://playground.devicehive.com/api/websocket",
     "SUCCESS_STATUS": "success",
     "ACTIONS": {
       "AUTHENTICATE": "authenticate",

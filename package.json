@@ -21,18 +21,19 @@
   "dependencies": {
     "cote": "^0.15.1",
     "debug": "^3.1.0",
+    "json-evn-configurator": "^1.0.4",
     "lru-cache": "^4.1.1",
     "mosca": "^2.7.0",
-    "pm2": "^2.7.2",
-    "pmx": "^1.5.4",
+    "pm2": "^2.9.1",
+    "pmx": "^1.5.5",
     "randomstring": "^1.1.5",
     "winston": "^2.4.0"
   },
   "devDependencies": {
     "chai": "^4.1.2",
     "co-mocha": "^1.2.1",
-    "mocha": "^4.0.1",
-    "mqtt": "^2.13.1",
-    "sinon": "^4.0.2"
+    "mocha": "^4.1.0",
+    "mqtt": "^2.15.1",
+    "sinon": "^4.1.6"
   }
 }
