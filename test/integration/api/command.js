@@ -1,23 +1,13 @@
+const CONST = require(`../constants.json`);
+const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
 const EventEmitter = require('events');
 const randomString = require(`randomstring`);
-const sinon = require(`sinon`);
 const chai = require(`chai`);
 const expect = chai.expect;
-const assert = chai.assert;
 
 const ee = new EventEmitter();
 
-const DH_RESPONSE_TOPIC = `dh/response`;
-const DH_REQUEST_TOPIC = `dh/request`;
-const MQTT_BROKER_URL = `mqtt://localhost:1883`;
-const TEST_LOGIN = `mqtt_proxy_test_login`;
-const TEST_PASSWORD = `qwertyui`;
-const TEST_USER_ID = 14347;
-const SUCCESS_STATUS = `success`;
-const ERROR_STATUS = `error`;
-const DEVICE_ID = `VQjfBdTl0LvMVBt9RTJMOmwdqr6hWLjln1wZ`;
-const NETWORK_ID = 12276;
 const SUBJECT = `command`;
 const GET_OPERATION = `get`;
 const LIST_OPERATION = `list`;
@@ -27,11 +17,11 @@ const GET_ACTION = `${SUBJECT}/${GET_OPERATION}`;
 const LIST_ACTION = `${SUBJECT}/${LIST_OPERATION}`;
 const INSERT_ACTION = `${SUBJECT}/${INSERT_OPERATION}`;
 const UPDATE_ACTION = `${SUBJECT}/${UPDATE_OPERATION}`;
-const GET_TOPIC = `${DH_RESPONSE_TOPIC}/${GET_ACTION}`;
-const LIST_TOPIC = `${DH_RESPONSE_TOPIC}/${LIST_ACTION}`;
-const INSERT_TOPIC = `${DH_RESPONSE_TOPIC}/${INSERT_ACTION}`;
-const UPDATE_TOPIC = `${DH_RESPONSE_TOPIC}/${UPDATE_ACTION}`;
-const TEST_COMMAND_NAME = `mqtt-broker-integration-tests-command-name`;
+const GET_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${GET_ACTION}`;
+const LIST_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${LIST_ACTION}`;
+const INSERT_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${INSERT_ACTION}`;
+const UPDATE_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${UPDATE_ACTION}`;
+const TEST_COMMAND_NAME = randomString.generate();
 const START_TEST_COMMAND_PARAMETERS = { parameter: `startParameter` };
 const UPDATED_TEST_COMMAND_PARAMETERS = { parameter: `updatedParameter` };
 const COMMAND_LIFETIME = 20;
@@ -39,13 +29,15 @@ let mqttClient, testCommandId;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
-        mqttClient = mqtt.connect(MQTT_BROKER_URL, {
-            username: TEST_LOGIN,
-            password: TEST_PASSWORD
+        mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
+            username: Config.TEST_LOGIN,
+            password: Config.TEST_PASSWORD
         });
 
         mqttClient.on(`message`, (topic, message) => {
-            ee.emit(topic.split(`/`)[3].split(`@`)[0], JSON.parse(message.toString()))
+            const messageObject = JSON.parse(message.toString());
+
+            ee.emit(messageObject.requestId, messageObject);
         });
 
         mqttClient.on('connect', () => {
@@ -102,25 +94,23 @@ it(`should subscribe for "${UPDATE_TOPIC}" topic`, () => {
     });
 });
 
-it(`should create new command with name: "${TEST_COMMAND_NAME}" for device with id: "${DEVICE_ID}"`, () => {
+it(`should create new command with name: "${TEST_COMMAND_NAME}" for device with id: "${Config.DEVICE_ID}"`, () => {
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(INSERT_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.command).to.be.an(`object`);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.command).to.be.an(`object`);
 
-                testCommandId = message.command.id;
+            testCommandId = message.command.id;
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: INSERT_ACTION,
             requestId: requestId,
-            deviceId: DEVICE_ID,
+            deviceId: Config.DEVICE_ID,
             command: {
                 command: TEST_COMMAND_NAME,
                 parameters: START_TEST_COMMAND_PARAMETERS,
@@ -134,49 +124,45 @@ it(`should query the command with name: "${TEST_COMMAND_NAME}" and parameters: "
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(GET_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.command).to.be.an(`object`);
-                expect(message.command.id).to.equal(testCommandId);
-                expect(message.command.command).to.equal(TEST_COMMAND_NAME);
-                expect(message.command.deviceId).to.equal(DEVICE_ID);
-                expect(message.command.parameters).to.deep.equal(START_TEST_COMMAND_PARAMETERS);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.command).to.be.an(`object`);
+            expect(message.command.id).to.equal(testCommandId);
+            expect(message.command.command).to.equal(TEST_COMMAND_NAME);
+            expect(message.command.deviceId).to.equal(Config.DEVICE_ID);
+            expect(message.command.parameters).to.deep.equal(START_TEST_COMMAND_PARAMETERS);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: GET_ACTION,
             requestId: requestId,
-            deviceId: DEVICE_ID,
+            deviceId: Config.DEVICE_ID,
             commandId: testCommandId
         }));
     });
 });
 
-it(`should query the list of command for device with id: "${DEVICE_ID}" with existing command with name: "${TEST_COMMAND_NAME}"`, () => {
+it(`should query the list of command for device with id: "${Config.DEVICE_ID}" with existing command with name: "${TEST_COMMAND_NAME}"`, () => {
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(LIST_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.commands).to.be.an(`array`);
-                expect(message.commands.map((commandObject) => commandObject.id))
-                    .to.include.members([testCommandId]);
-                expect(message.commands.map((commandObject) => commandObject.command))
-                    .to.include.members([TEST_COMMAND_NAME]);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.commands).to.be.an(`array`);
+            expect(message.commands.map((commandObject) => commandObject.id))
+                .to.include.members([testCommandId]);
+            expect(message.commands.map((commandObject) => commandObject.command))
+                .to.include.members([TEST_COMMAND_NAME]);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: LIST_ACTION,
             requestId: requestId,
-            deviceId: DEVICE_ID,
+            deviceId: Config.DEVICE_ID,
             take: 1000
         }));
     });
@@ -186,18 +172,16 @@ it(`should update the command parameters: "${JSON.stringify(START_TEST_COMMAND_P
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(UPDATE_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: UPDATE_ACTION,
             requestId: requestId,
-            deviceId: DEVICE_ID,
+            deviceId: Config.DEVICE_ID,
             commandId: testCommandId,
             command: {
                 parameters: UPDATED_TEST_COMMAND_PARAMETERS
@@ -210,23 +194,21 @@ it(`should query the updated command where updated parameters are: "${JSON.strin
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(GET_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.command).to.be.an(`object`);
-                expect(message.command.id).to.equal(testCommandId);
-                expect(message.command.command).to.equal(TEST_COMMAND_NAME);
-                expect(message.command.deviceId).to.equal(DEVICE_ID);
-                expect(message.command.parameters).to.deep.equal(UPDATED_TEST_COMMAND_PARAMETERS);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.command).to.be.an(`object`);
+            expect(message.command.id).to.equal(testCommandId);
+            expect(message.command.command).to.equal(TEST_COMMAND_NAME);
+            expect(message.command.deviceId).to.equal(Config.DEVICE_ID);
+            expect(message.command.parameters).to.deep.equal(UPDATED_TEST_COMMAND_PARAMETERS);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: GET_ACTION,
             requestId: requestId,
-            deviceId: DEVICE_ID,
+            deviceId: Config.DEVICE_ID,
             commandId: testCommandId
         }));
     });

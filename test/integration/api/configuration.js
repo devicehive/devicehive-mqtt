@@ -1,23 +1,13 @@
+const CONST = require(`../constants.json`);
+const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
 const EventEmitter = require('events');
 const randomString = require(`randomstring`);
-const sinon = require(`sinon`);
 const chai = require(`chai`);
 const expect = chai.expect;
-const assert = chai.assert;
 
 const ee = new EventEmitter();
 
-const DH_RESPONSE_TOPIC = `dh/response`;
-const DH_REQUEST_TOPIC = `dh/request`;
-const MQTT_BROKER_URL = `mqtt://localhost:1883`;
-const TEST_LOGIN = `mqtt_proxy_test_login`;
-const TEST_PASSWORD = `qwertyui`;
-const TEST_USER_ID = 14347;
-const SUCCESS_STATUS = `success`;
-const ERROR_STATUS = `error`;
-const DEVICE_ID = `VQjfBdTl0LvMVBt9RTJMOmwdqr6hWLjln1wZ`;
-const NETWORK_ID = 12276;
 const SUBJECT = `configuration`;
 const GET_OPERATION = `get`;
 const PUT_OPERATION = `put`;
@@ -25,23 +15,25 @@ const DELETE_OPERATION = `delete`;
 const GET_ACTION = `${SUBJECT}/${GET_OPERATION}`;
 const PUT_ACTION = `${SUBJECT}/${PUT_OPERATION}`;
 const DELETE_ACTION = `${SUBJECT}/${DELETE_OPERATION}`;
-const GET_TOPIC = `${DH_RESPONSE_TOPIC}/${GET_ACTION}`;
-const PUT_TOPIC = `${DH_RESPONSE_TOPIC}/${PUT_ACTION}`;
-const DELETE_TOPIC = `${DH_RESPONSE_TOPIC}/${DELETE_ACTION}`;
-const TEST_CONFIGURATION_NAME = `mqttTestsConfigurationName`;
-const START_TEST_CONFIGURATION_VALUE = `mqttTestsConfigurationValue`;
-const UPDATED_TEST_CONFIGURATION_VALUE = `mqttTestsConfigurationValueUpdated`;
+const GET_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${GET_ACTION}`;
+const PUT_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${PUT_ACTION}`;
+const DELETE_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${DELETE_ACTION}`;
+const TEST_CONFIGURATION_NAME = randomString.generate();
+const START_TEST_CONFIGURATION_VALUE = randomString.generate();
+const UPDATED_TEST_CONFIGURATION_VALUE = randomString.generate();
 let mqttClient;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
-        mqttClient = mqtt.connect(MQTT_BROKER_URL, {
-            username: TEST_LOGIN,
-            password: TEST_PASSWORD
+        mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
+            username: Config.TEST_LOGIN,
+            password: Config.TEST_PASSWORD
         });
 
         mqttClient.on(`message`, (topic, message) => {
-            ee.emit(topic.split(`/`)[3].split(`@`)[0], JSON.parse(message.toString()))
+            const messageObject = JSON.parse(message.toString());
+
+            ee.emit(messageObject.requestId, messageObject);
         });
 
         mqttClient.on('connect', () => {
@@ -90,18 +82,16 @@ it(`should put new configuration with name: "${TEST_CONFIGURATION_NAME}" and val
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(PUT_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.configuration).to.be.an(`object`);
-                expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-                expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.configuration).to.be.an(`object`);
+            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
+            expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: PUT_ACTION,
             requestId: requestId,
             name: TEST_CONFIGURATION_NAME,
@@ -114,18 +104,16 @@ it(`should query configuration with name: "${TEST_CONFIGURATION_NAME}"`, () => {
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(GET_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.configuration).to.be.an(`object`);
-                expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-                expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.configuration).to.be.an(`object`);
+            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
+            expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: GET_ACTION,
             requestId: requestId,
             name: TEST_CONFIGURATION_NAME
@@ -137,18 +125,16 @@ it(`should update configuration with name: "${TEST_CONFIGURATION_NAME}" by new v
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(PUT_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.configuration).to.be.an(`object`);
-                expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-                expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.configuration).to.be.an(`object`);
+            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
+            expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: PUT_ACTION,
             requestId: requestId,
             name: TEST_CONFIGURATION_NAME,
@@ -161,18 +147,16 @@ it(`should query updated configuration with name: "${TEST_CONFIGURATION_NAME}" a
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(GET_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
-                expect(message.configuration).to.be.an(`object`);
-                expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-                expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
+            expect(message.configuration).to.be.an(`object`);
+            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
+            expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: GET_ACTION,
             requestId: requestId,
             name: TEST_CONFIGURATION_NAME
@@ -184,15 +168,13 @@ it(`should delete configuration with name: "${TEST_CONFIGURATION_NAME}"`, () => 
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(DELETE_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(SUCCESS_STATUS);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.SUCCESS_STATUS);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: DELETE_ACTION,
             requestId: requestId,
             name: TEST_CONFIGURATION_NAME
@@ -204,15 +186,13 @@ it(`should check that configuration with name: "${TEST_CONFIGURATION_NAME}" has 
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
-        ee.once(GET_OPERATION, (message) => {
-            if (message.requestId === requestId) {
-                expect(message.status).to.equal(ERROR_STATUS);
+        ee.once(requestId, (message) => {
+            expect(message.status).to.equal(CONST.ERROR_STATUS);
 
-                resolve();
-            }
+            resolve();
         });
 
-        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
             action: GET_ACTION,
             requestId: requestId
         }));

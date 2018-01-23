@@ -1,3 +1,4 @@
+const BrokerConfig = require(`../config`).broker;
 const CONST = require('../util/constants.json');
 const mosca = require('mosca');
 const ApplicationLogger = require(`./ApplicationLogger.js`);
@@ -8,36 +9,19 @@ const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
-/**
- * Environmental variables
- * NODE_ENV - "dev" for development
- * BROKER_PORT - port on wich broker will start
- * WS_SERVER_URL - path to Web Socket server
- * REDIS_SERVER_HOST - Redis storage host
- * REDIS_SERVER_PORT - Redis storage port
- * DEBUG - to enable modules logging
- * APP_LOG_LEVEL - application logger level
- * ENABLE_PM - enable process monitoring
- */
 
-const IS_DEV = process.env.NODE_ENV === CONST.DEV;
-const WS_SERVER_URL = process.env.WS_SERVER_URL || CONST.WS.DEV_HOST;
-const BROKER_PORT = process.env.BROKER_PORT || CONST.MQTT.DEFAULT_PORT;
-const REDIS_SERVER_HOST = process.env.REDIS_SERVER_HOST || CONST.PERSISTENCE.REDIS_DEV_HOST;
-const REDIS_SERVER_PORT = process.env.REDIS_SERVER_PORT || CONST.PERSISTENCE.REDIS_DEV_PORT;
-
-const appLogger = new ApplicationLogger();
+const appLogger = new ApplicationLogger(BrokerConfig.APP_LOG_LEVEL);
 const crossBrokerCommunicator = new CrossBrokerCommunicator();
 const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
-const wsManager = new WebSocketManager(WS_SERVER_URL);
+const wsManager = new WebSocketManager(BrokerConfig.WS_SERVER_URL);
 const server = new mosca.Server({
-    port: Number(BROKER_PORT),
+    port: Number(BrokerConfig.BROKER_PORT),
     stats: true,
     persistence: {
         factory: mosca.persistence.Redis,
-        host: REDIS_SERVER_HOST,
-        port: REDIS_SERVER_PORT,
+        host: BrokerConfig.REDIS_SERVER_HOST,
+        port: BrokerConfig.REDIS_SERVER_PORT,
         ttl: {
             subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
             packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
@@ -134,7 +118,7 @@ server.authorizeSubscribe = function (client, topic, callback) {
 };
 
 server.on(`ready`, () => {
-    appLogger.info(`broker has been started on port: ${BROKER_PORT}`);
+    appLogger.info(`broker has been started on port: ${BrokerConfig.BROKER_PORT}`);
 });
 
 server.on(`clientConnected`, (client) => {

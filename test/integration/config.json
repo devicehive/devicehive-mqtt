@@ -1,0 +1,9 @@
+{
+  "MQTT_BROKER_URL": "mqtt://localhost:1883",
+  "TEST_LOGIN": "dhadmin",
+  "TEST_PASSWORD": "dhadmin_#911",
+  "TEST_USER_ID": 1,
+  "DEVICE_ID": "e50d6085-2aba-48e9-b1c3-73c673e414be",
+  "DEVICE_TYPE_ID": 1,
+  "NETWORK_ID": 1
+}

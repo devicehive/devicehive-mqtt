@@ -1,7 +1,6 @@
 const winston = require(`winston`);
 const config = winston.config;
 
-const APP_LOG_LEVEL = process.env.APP_LOG_LEVEL || `info`;
 
 /**
  * Application logger facade class.
@@ -11,7 +10,7 @@ class ApplicationLogger {
     /**
      * Create new ApplicationLogger
      */
-    constructor () {
+    constructor (loggingLevel) {
         const me = this;
         const loggerConfig = {
             levels: {
@@ -29,7 +28,7 @@ class ApplicationLogger {
             transports: [
                 new (winston.transports.Console)({
                     colorize: true,
-                    level: APP_LOG_LEVEL,
+                    level: loggingLevel,
                     timestamp: () => (new Date()).toISOString(),
                     formatter: (options) => {
                         const pid = process.pid;

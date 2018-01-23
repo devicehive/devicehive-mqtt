@@ -36,19 +36,39 @@ Start Up
 ===
 The **devicehive-mqtt** broker can be launched directly via node, docker container or docker-compose. 
 With last choice is pretty easy to scale the broker horizontally.
-Also you might to specify a set of environmental variables that are described in the next paragraph.
+Also you might to specify a set of configurations/environmental variables that are described in the next paragraph.
 
-Environmental variables
----
- `NODE_ENV` - "prod" for production, "dev" for development  
- `BROKER_PORT` - port on wich broker will start (default: 1883)  
- `WS_SERVER_URL` - path to Web Socket server (default: ws://playground.devicehive.com/api/websocket)  
- `REDIS_SERVER_HOST` - Redis storage host (default: localhost)  
- `REDIS_SERVER_PORT` - Redis storage port (default: 6379)  
- `DEBUG` - [debug] modules logger (modules: subscriptionmanager, websocketfactory, websocketmanager)  
- `APP_LOG_LEVEL` - application logger level (levels: debug, info, warn, error)  
- `ENABLE_PM` - enable process monitoring with [PM2] module 
- 
+# Configuration
+## Broker
+    [path-to-broker-project]/src/config.json    
+
+ - **_BROKER_PORT_** - port on wich broker will start (default: 1883)  
+ - **_WS_SERVER_URL_** - path to Web Socket server (default: ws://localhost:8080/dh/websocket)  
+ - **_REDIS_SERVER_HOST_** - Redis storage host (default: localhost)  
+ - **_REDIS_SERVER_PORT_** - Redis storage port (default: 6379)  
+ - **_APP_LOG_LEVEL_** - application logger level (levels: debug, info, warn, error)  
+ - **_ENABLE_PM_** - enable process monitoring with [PM2] module  
+
+Each configuration field can be overridden with corresponding environmental variable with "BROKER" prefix, for example:
+
+    BROKER.BROKER_PORT=6000
+
+Prefix separator can be overridden by **_ENVSEPARATOR_** environmental variable. Example:
+
+    ENVSEPARATOR=_
+    BROKER_BROKER_PORT=6000
+    
+## Broker modules logging
+Through the "DEBUG" ([debug]) environment variable you are able to specify next modules loggers:
+
+- **_subscriptionmanager_** - SubscriptionManager module logging; 
+- **_websocketfactory_** - WebSocketFactory module logging; 
+- **_websocketmanager_** - WebSocketManager module logging; 
+
+Example:
+
+    DEBUG=subscriptionmanager,websocketfactory,websocketmanager
+    
 Run with Node
 ---
 In the folder of cloned **devicehive-mqtt** repo run next commands:
@@ -59,11 +79,7 @@ Install all dependencies:
 
 Start broker:
 
-    <environmental-variables-list> node ./src/broker.js
-
-Where:
-
-_environmental-variables-list_ - list of environmental variables, e.g. _NODE_ENV=prod,BROKER_PORT=1883,..._
+    node ./src/broker.js
 
 Also, it's pretty useful to enable process monitoring with [PM2] module (ENABLE_PM environmental variables) and
 start the broker via PM2.
@@ -125,6 +141,7 @@ DeviceHive messaging structure projection on MQTT topic structure
 ===
 [DeviceHive] has next structure entities:
 - network
+- device type
 - device
 - message type
     * notification
@@ -146,14 +163,17 @@ To receive responses of request the MQTT client should subscribe to the response
 Where _requestAction_ ia a request action (**user/get**, **device/delete**, **token/refresh etc.**)
 Response topic should be always private (e.g. with client ID mentioned)
 
-The MQTT client is able to subscribe to the notification/command topic to receive notification/command push messages
+The MQTT client is able to subscribe to the notification/command/command_update topic to receive notification/command/command_update push messages
 
-    dh/notification/<networkID>/<deviceID>/<notificationName>[@<clientID>]
+    dh/notification/<networkID>/<deviceTypeID>/<deviceID>/<notificationName>[@<clientID>]
         
-    dh/command/<networkID>/<deviceID>/<commandName>[@<clientID>]
+    dh/command/<networkID>/<deviceTypeID>/<deviceID>/<commandName>[@<clientID>]
+    
+    dh/command_update/<networkID>/<deviceTypeID>/<deviceID>/<commandName>[@<clientID>]
 
 Where: 
 - networkID - id of the network
+- deviceTypeID - id of the device type
 - deviceID - id of the device
 - notificationName - notification name
 - commandName - command name
@@ -234,15 +254,15 @@ _**Connection with username and password, subscription for notification and comm
     client.on('connect', () => {
         /* Subscribe for notification push messages with name = notificationName
             of device with id = deviceId on network with id = networkId */  
-        client.subscribe('dh/notification/<networkId>/<deviceId>/<notificationName>');
+        client.subscribe('dh/notification/<networkId>/<deviceTypeId>/<deviceId>/<notificationName>');
         
         /* Subscribe for notification push messages with name = notificationName
             of any device on network with id = networkId */  
-        client.subscribe('dh/notification/<networkId>/+/<notificationName>');
+        client.subscribe('dh/notification/<networkId>/<deviceTypeId>/+/<notificationName>');
         
         /* Subscribe for command push messages with name = commandName
             of device with id = deviceId on network with id = networkId */  
-        client.subscribe('dh/command/<networkId>/<deviceId>/<commandName>');
+        client.subscribe('dh/command/<networkId>/<deviceTypeId>/<deviceId>/<commandName>');
         
         /* Subscribe for command push messages on network with id = networkId
             for any device with any command name */  

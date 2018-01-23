@@ -1,3 +1,5 @@
+const CONST = require(`./constants.json`);
+const Config = require(`../config`).test.integration;
 const mqtt = require(`mqtt`);
 const EventEmitter = require('events');
 const randomString = require(`randomstring`);
@@ -6,29 +8,31 @@ const chai = require(`chai`);
 const expect = chai.expect;
 const assert = chai.assert;
 
-describe(`MQTT broker (should be run on localhost:1883)`, () => {
-    const DH_RESPONSE_TOPIC = `dh/response`;
-    const DH_REQUEST_TOPIC = `dh/request`;
-    const MQTT_BROKER_URL = `mqtt://localhost:1883`;
-    const TEST_LOGIN = `mqtt_proxy_test_login`;
-    const TEST_PASSWORD = `qwertyui`;
-    const TEST_USER_ID = 14347;
-    const SUCCESS_STATUS = `success`;
-    const ERROR_STATUS = `error`;
-    const DEVICE_ID = `VQjfBdTl0LvMVBt9RTJMOmwdqr6hWLjln1wZ`;
-    const NETWORK_ID = 12276;
 
+describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
     describe(`User API`, () => require(`./api/user.js`));
+
     describe(`Configuration API`, () => require(`./api/configuration.js`));
+
     describe(`Device API`, () => require(`./api/device.js`));
+
+    describe(`Device Type API`, () => require(`./api/devicetype.js`));
+
     describe(`Network API`, () => require(`./api/network.js`));
+
     describe(`Command API`, () => require(`./api/command.js`));
+
     describe(`Notification API`, () => require(`./api/notification.js`));
+
     describe(`Subscription API`, () => require(`./api/subscription.js`));
+
     describe(`Token API`, () => require(`./api/token.js`));
+
     describe(`Authentication API`, () => require(`./api/authentication.js`));
+
     describe(`Server API`, () => require(`./api/server.js`));
+
     describe(`Cluster API`, () => require(`./api/cluster.js`));
 
     describe(`Connection without credentials. Postponed authentication`, () => {
@@ -37,7 +41,7 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
         it(`should connect to MQTT broker without user credentials`, () => {
             return new Promise((resolve) => {
-                mqttClient = mqtt.connect(MQTT_BROKER_URL);
+                mqttClient = mqtt.connect(Config.MQTT_BROKER_URL);
 
                 mqttClient.on(`message`, (topic, message) => {
                     ee.emit(topic.split(`/`)[2].split(`@`)[0], JSON.parse(message.toString()))
@@ -91,7 +95,7 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             return new Promise((resolve) => {
                 ee.once(`token`, (message) => {
                     if (message.requestId === requestId) {
-                        expect(message.status).to.equal(SUCCESS_STATUS);
+                        expect(message.status).to.equal(CONST.SUCCESS_STATUS);
                         expect(message).to.include.all.keys(`accessToken`, `refreshToken`);
 
                         accessToken = message.accessToken;
@@ -100,11 +104,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     }
                 });
 
-                mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                     action: `token`,
                     requestId: requestId,
-                    login: TEST_LOGIN,
-                    password: TEST_PASSWORD
+                    login: Config.TEST_LOGIN,
+                    password: Config.TEST_PASSWORD
                 }));
             });
         });
@@ -115,13 +119,13 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             return new Promise((resolve) => {
                 ee.once(`authenticate`, (message) => {
                     if (message.requestId === requestId) {
-                        expect(message.status).to.equal(SUCCESS_STATUS);
+                        expect(message.status).to.equal(CONST.SUCCESS_STATUS);
 
                         resolve();
                     }
                 });
 
-                mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                     action: `authenticate`,
                     requestId: requestId,
                     token: accessToken
@@ -151,12 +155,14 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
     });
 
     describe(`Basic functionality`, () => {
-        let mqttClient;
+        let mqttClientId, mqttClient;
 
         beforeEach(() => {
-            mqttClient = mqtt.connect(MQTT_BROKER_URL, {
-                username: TEST_LOGIN,
-                password: TEST_PASSWORD
+            mqttClientId = randomString.generate();
+            mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
+                clientId: mqttClientId,
+                username: Config.TEST_LOGIN,
+                password: Config.TEST_PASSWORD
             });
         });
 
@@ -164,7 +170,7 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             mqttClient.end();
         });
 
-        it(`should connect to MQTT broker on "${MQTT_BROKER_URL}" as user: "${TEST_LOGIN}"`, (done) => {
+        it(`should connect to MQTT broker on "${Config.MQTT_BROKER_URL}" as user: "${Config.TEST_LOGIN}"`, (done) => {
             mqttClient.on(`connect`, () => {
                 done();
             });
@@ -175,16 +181,16 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
         });
 
         it(`should receive access and refresh tokens`, (done) => {
-            const responseTopic = `dh/response/token@${mqttClient.options.clientId}`;
-            const requestId = `integrationTestRequestId`;
+            const responseTopic = `dh/response/token@${mqttClientId}`;
+            const requestId = randomString.generate();
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(responseTopic, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: `token`,
                         requestId: requestId,
-                        login: TEST_LOGIN,
-                        password: TEST_PASSWORD
+                        login: Config.TEST_LOGIN,
+                        password: Config.TEST_PASSWORD
                     }));
                 });
             });
@@ -193,7 +199,7 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 const messageObject = JSON.parse(message.toString());
 
                 expect(topic).to.equal(responseTopic);
-                expect(messageObject.status).to.equal(SUCCESS_STATUS);
+                expect(messageObject.status).to.equal(CONST.SUCCESS_STATUS);
                 expect(messageObject.requestId).to.equal(requestId);
                 expect(messageObject).to.include.all.keys(`accessToken`, `refreshToken`);
 
@@ -207,15 +213,16 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
         it(`should subscribe for notification/insert event and publish new notification`, (done) => {
             const randomNotificationName = randomString.generate();
-            const subscriptionTopic = `dh/notification/${NETWORK_ID}/${DEVICE_ID}/${randomNotificationName}`;
+            const subscriptionTopic = `dh/notification/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/${randomNotificationName}`;
             const action = `notification/insert`;
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: action,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         notification: {
                             notification: randomNotificationName,
                             timestamp: new Date(),
@@ -244,15 +251,16 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
         it(`should subscribe for command/insert event and publish new command`, (done) => {
             const randomCommandName = randomString.generate();
-            const subscriptionTopic = `dh/command/${NETWORK_ID}/${DEVICE_ID}/${randomCommandName}`;
+            const subscriptionTopic = `dh/command/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/${randomCommandName}`;
             const action = `command/insert`;
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: action,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         command: {
                             command: randomCommandName,
                             timestamp: new Date(),
@@ -284,8 +292,8 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
         it(`should subscribe for command/update event, create and update command`, (done) => {
             const randomCommandName = randomString.generate();
-            const subscriptionTopic1 = `dh/command_update/${NETWORK_ID}/${DEVICE_ID}/${randomCommandName}`;
-            const subscriptionTopic2 = `dh/command/${NETWORK_ID}/${DEVICE_ID}/${randomCommandName}`;
+            const subscriptionTopic1 = `dh/command_update/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/${randomCommandName}`;
+            const subscriptionTopic2 = `dh/command/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/${randomCommandName}`;
             const actionInsert = `command/insert`;
             const actionUpdate = `command/update`;
             const startValue = 1;
@@ -294,10 +302,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic1);
                 mqttClient.subscribe(subscriptionTopic2, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: actionInsert,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         command: {
                             command: randomCommandName,
                             timestamp: new Date(),
@@ -316,9 +325,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 if (topic === subscriptionTopic2) {
                     expect(messageObject.command.parameters.value).to.equal(startValue);
 
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: actionUpdate,
-                        deviceId: DEVICE_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         commandId: messageObject.command.id,
                         command: {
                             command: randomCommandName,
@@ -342,8 +353,8 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
         });
 
         it(`should be able to unsubscribe from previous subscriptions`, (done) => {
-            const subscriptionTopic1 = `dh/notification/${NETWORK_ID}/${DEVICE_ID}/light`;
-            const subscriptionTopic2 = `dh/command/${NETWORK_ID}/${DEVICE_ID}/switchOff`;
+            const subscriptionTopic1 = `dh/notification/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/light`;
+            const subscriptionTopic2 = `dh/command/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/switchOff`;
             const actionNotification = `notification/insert`;
             const actionCommand = `command/insert`;
             const subscription1Spy = sinon.spy();
@@ -351,10 +362,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic1, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: actionNotification,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         notification: {
                             notification: `light`,
                             timestamp: new Date(),
@@ -366,10 +378,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 });
 
                 mqttClient.subscribe(subscriptionTopic2, () => {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: actionCommand,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         command: {
                             command: 'switchOff',
                             timestamp: new Date(),
@@ -387,10 +400,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     subscription1Spy();
 
                     mqttClient.unsubscribe(subscriptionTopic1, () => {
-                        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                             action: actionNotification,
-                            deviceId: DEVICE_ID,
-                            networkId: NETWORK_ID,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
                             notification: {
                                 notification: `light`,
                                 timestamp: new Date(),
@@ -404,10 +418,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     subscription2Spy();
 
                     mqttClient.unsubscribe(subscriptionTopic2, () => {
-                        mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                             action: actionCommand,
-                            deviceId: DEVICE_ID,
-                            networkId: NETWORK_ID,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
                             command: {
                                 command: 'switchOn',
                                 timestamp: new Date(),
@@ -436,19 +451,20 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
         }).timeout(5000);
 
         it(`should send notification of same subscription for each subscriber only once`, (done) => {
-            const SUBSCRIPTION_TOPIC = `dh/notification/${NETWORK_ID}/${DEVICE_ID}/sharedNotification`;
+            const SUBSCRIPTION_TOPIC = `dh/notification/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/sharedNotification`;
             const ACTION_NOTIFICATION = `notification/insert`;
-            const mqttClient2 = mqtt.connect(MQTT_BROKER_URL, { username: TEST_LOGIN, password: TEST_PASSWORD });
-            const mqttClient3 = mqtt.connect(MQTT_BROKER_URL, { username: TEST_LOGIN, password: TEST_PASSWORD });
+            const mqttClient2 = mqtt.connect(Config.MQTT_BROKER_URL, { username: Config.TEST_LOGIN, password: Config.TEST_PASSWORD });
+            const mqttClient3 = mqtt.connect(Config.MQTT_BROKER_URL, { username: Config.TEST_LOGIN, password: Config.TEST_PASSWORD });
             let subscriptionCounter = 0;
             const sharedPublisher = () => {
                 subscriptionCounter++;
 
                 if (subscriptionCounter > 2) {
-                    mqttClient.publish(DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
                         action: ACTION_NOTIFICATION,
-                        deviceId: DEVICE_ID,
-                        networkId: NETWORK_ID,
+                        deviceId: Config.DEVICE_ID,
+                        networkId: Config.NETWORK_ID,
+                        deviceTypeId: Config.DEVICE_TYPE_ID,
                         notification: {
                             notification: `sharedNotification`,
                             timestamp: new Date(),
@@ -509,4 +525,5 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             }, 4500);
         }).timeout(5000);
     });
+
 });
