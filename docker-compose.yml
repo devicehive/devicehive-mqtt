@@ -19,7 +19,7 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
@@ -30,7 +30,7 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
@@ -41,7 +41,7 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
@@ -52,7 +52,7 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground.dev.devicehive.com/api/websocket
+      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - ENABLE_PM=false
