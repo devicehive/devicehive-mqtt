@@ -43,7 +43,7 @@ Also you might to specify a set of configurations/environmental variables that a
     [path-to-broker-project]/src/config.json    
 
  - **_BROKER_PORT_** - port on wich broker will start (default: 1883)  
- - **_WS_SERVER_URL_** - path to Web Socket server (default: ws://playground.devicehive.com/api/websocket)  
+ - **_WS_SERVER_URL_** - path to Web Socket server (default: ws://localhost:8080/dh/websocket)  
  - **_REDIS_SERVER_HOST_** - Redis storage host (default: localhost)  
  - **_REDIS_SERVER_PORT_** - Redis storage port (default: 6379)  
  - **_APP_LOG_LEVEL_** - application logger level (levels: debug, info, warn, error)  
