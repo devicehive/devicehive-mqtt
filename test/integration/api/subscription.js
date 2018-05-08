@@ -100,19 +100,19 @@ it(`should subscribe for "${SUBSCRIPTION_NOTIFICATION_TOPIC_2}" topic`, () => {
     });
 });
 
-xit(`should query the list of command subscriptions for the user login: "${Config.TEST_LOGIN}"`, () => {
+it(`should query the list of command subscriptions for the user login: "${Config.TEST_LOGIN}"`, () => {
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
-            expect(message.subscriptions).to.be.an(`object`);
-            expect(Object.entries(message.subscriptions).map(([subscriptionId, subscriptionObject]) => {
-                return subscriptionObject.deviceIds[0];
+            expect(message.subscriptions).to.be.an(`array`);
+            expect(message.subscriptions.map((subscriptionObject) => {
+                return subscriptionObject.deviceId;
             })).to.include.members([Config.DEVICE_ID]);
-            expect(Object.entries(message.subscriptions).map(([subscriptionId, subscriptionObject]) => {
+            expect(message.subscriptions.map((subscriptionObject) => {
                 return subscriptionObject.names[0];
-            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}1`]);
+            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
 
             resolve();
         });
@@ -125,19 +125,19 @@ xit(`should query the list of command subscriptions for the user login: "${Confi
     });
 });
 
-xit(`should query the list of notification subscriptions for the user login: "${Config.TEST_LOGIN}"`, () => {
+it(`should query the list of notification subscriptions for the user login: "${Config.TEST_LOGIN}"`, () => {
     const requestId = randomString.generate();
 
     return new Promise((resolve) => {
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
-            expect(message.subscriptions).to.be.an(`object`);
-            expect(Object.entries(message.subscriptions).map(([subscriptionId, subscriptionObject]) => {
-                return subscriptionObject.deviceIds[0];
+            expect(message.subscriptions).to.be.an(`array`);
+            expect(message.subscriptions.map((subscriptionObject) => {
+                return subscriptionObject.deviceId;
             })).to.include.members([Config.DEVICE_ID]);
-            expect(Object.entries(message.subscriptions).map(([subscriptionId, subscriptionObject]) => {
+            expect(message.subscriptions.map((subscriptionObject) => {
                 return subscriptionObject.names[0];
-            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}1`]);
+            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
 
             resolve();
         });
