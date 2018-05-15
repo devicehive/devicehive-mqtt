@@ -8,8 +8,6 @@ services:
       links:
         - broker1:broker1
         - broker2:broker2
-        - broker3:broker3
-        - broker4:broker4
       ports:
         - "1883:8883"
   broker1:
@@ -19,10 +17,12 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
-      - REDIS_SERVER_HOST=redis
-      - REDIS_SERVER_PORT=6379
-      - ENABLE_PM=false
+      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
+      - BROKER.REDIS_SERVER_HOST=redis
+      - BROKER.REDIS_SERVER_PORT=6379
+      - BROKER.ENABLE_PM=false
+      - BROKER.APP_LOG_LEVEL=debug
+      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager
   broker2:
     build: .
     container_name: broker2
@@ -30,32 +30,12 @@ services:
       - cote
       - redis
     environment:
-      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
-      - REDIS_SERVER_HOST=redis
-      - REDIS_SERVER_PORT=6379
-      - ENABLE_PM=false
-  broker3:
-    build: .
-    container_name: broker3
-    networks:
-      - cote
-      - redis
-    environment:
-      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
-      - REDIS_SERVER_HOST=redis
-      - REDIS_SERVER_PORT=6379
-      - ENABLE_PM=false
-  broker4:
-    build: .
-    container_name: broker4
-    networks:
-      - cote
-      - redis
-    environment:
-      - WS_SERVER_URL=ws://playground-dev.devicehive.com/api/websocket
-      - REDIS_SERVER_HOST=redis
-      - REDIS_SERVER_PORT=6379
-      - ENABLE_PM=false
+      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
+      - BROKER.REDIS_SERVER_HOST=redis
+      - BROKER.REDIS_SERVER_PORT=6379
+      - BROKER.ENABLE_PM=false
+      - BROKER.APP_LOG_LEVEL=debug
+      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager
   redis:
     image: "redis:alpine"
     container_name: redis
