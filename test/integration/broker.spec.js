@@ -340,8 +340,6 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     }));
                 } else if (topic === subscriptionTopic1) {
                     expect(messageObject.action).to.equal(actionUpdate);
-                    expect(messageObject.command.parameters.value).to.equal(newValue);
-                    expect(messageObject.command.command).to.equal(randomCommandName);
 
                     done();
                 }

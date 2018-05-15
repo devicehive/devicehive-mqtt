@@ -91,6 +91,10 @@ server.authorizePublish = function (client, topic, payload, callback) {
         appLogger.debug(`client with id: "${client.id}" has been authorized for publishing in to the topic: "${topic}"`) :
         appLogger.warn(`client with id: "${client.id}" has not been authorized for publishing in to the topic: "${topic}"`);
 
+    if (isAuthorized) {
+        wsManager.lock(client.id);
+    }
+
     callback(null, isAuthorized);
 };
 
@@ -143,6 +147,8 @@ server.on(`published`, (packet, client) => {
         }
 
         appLogger.debug(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);
+
+        wsManager.unlock(client.id);
     } else {
         if (isBrokerSYSTopic(packet.topic)) {
             brokerProcessMonitoring.updateMetric(convertTopicToMetricName(packet.topic), packet.payload.toString());

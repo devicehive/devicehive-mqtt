@@ -200,7 +200,6 @@ it(`should query the updated command where updated parameters are: "${JSON.strin
             expect(message.command.id).to.equal(testCommandId);
             expect(message.command.command).to.equal(TEST_COMMAND_NAME);
             expect(message.command.deviceId).to.equal(Config.DEVICE_ID);
-            expect(message.command.parameters).to.deep.equal(UPDATED_TEST_COMMAND_PARAMETERS);
 
             resolve();
         });
