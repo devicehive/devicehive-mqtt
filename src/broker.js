@@ -16,7 +16,12 @@ const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(BrokerConfig.WS_SERVER_URL);
 const server = new mosca.Server({
-    port: Number(BrokerConfig.BROKER_PORT),
+    port: BrokerConfig.BROKER_PORT,
+    http: {
+        port: BrokerConfig.BROKER_WS_PORT,
+        bundle: true,
+        static: './'
+    },
     stats: true,
     persistence: {
         factory: mosca.persistence.Redis,
