@@ -1,5 +1,6 @@
 {
     "BROKER_PORT": 1883,
+    "BROKER_WS_PORT": 3000,
     "WS_SERVER_URL": "ws://localhost:8080/dh/websocket",
     "REDIS_SERVER_HOST": "localhost",
     "REDIS_SERVER_PORT": "6379",

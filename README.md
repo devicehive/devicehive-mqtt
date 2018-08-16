@@ -20,7 +20,7 @@ MQTT plugin for DeviceHive server
 ===
 The **devicehive-mqtt** broker is a MQTT transport layer between MQTT clients and [DeviceHive] server.
 The broker uses WebSocket sessions to communicate with [DeviceHive] Server and Redis server for persistence functionality.
-The **devicehive-mqtt** broker supports _QOS0_ and _QOS2_, _retain messages_ and _last will_.
+The **devicehive-mqtt** broker supports _QOS0_ and _QOS1_, _retain messages_ and _last will_.
 The **devicehive-mqtt** broker is powered by [Mosca] MQTT broker library.
 
 Prerequisites
@@ -43,6 +43,7 @@ Also you might to specify a set of configurations/environmental variables that a
     [path-to-broker-project]/src/config.json    
 
  - **_BROKER_PORT_** - port on wich broker will start (default: 1883)  
+ - **_BROKER_WS_PORT_** - MQTT over WebSocket port (default: 3000)  
  - **_WS_SERVER_URL_** - path to Web Socket server (default: ws://localhost:8080/dh/websocket)  
  - **_REDIS_SERVER_HOST_** - Redis storage host (default: localhost)  
  - **_REDIS_SERVER_PORT_** - Redis storage port (default: 6379)  
