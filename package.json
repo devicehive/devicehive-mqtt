@@ -20,20 +20,23 @@
   "homepage": "https://github.com/devicehive/devicehive-mqtt#readme",
   "dependencies": {
     "cote": "^0.15.1",
-    "debug": "^3.1.0",
+    "debug": "^3.2.6",
+    "devicehive-proxy-message": "^1.0.12",
+    "fifo": "^2.3.0",
     "json-evn-configurator": "^1.0.6",
-    "lru-cache": "^4.1.3",
+    "lru-cache": "^4.1.5",
     "mosca": "^2.8.3",
     "pm2": "^2.10.4",
     "pmx": "^1.6.7",
     "randomstring": "^1.1.5",
-    "winston": "^2.4.3"
+    "uuid": "^3.3.2",
+    "winston": "^2.4.4"
   },
   "devDependencies": {
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "co-mocha": "^1.2.2",
     "mocha": "^4.1.0",
-    "mqtt": "^2.18.3",
+    "mqtt": "^2.18.8",
     "sinon": "^4.5.0"
   }
 }

@@ -9,6 +9,7 @@ const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
+require(`./proxy`);
 
 const appLogger = new ApplicationLogger(BrokerConfig.APP_LOG_LEVEL);
 const crossBrokerCommunicator = new CrossBrokerCommunicator();
