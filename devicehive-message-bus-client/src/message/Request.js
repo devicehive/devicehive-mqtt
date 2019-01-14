@@ -1,5 +1,6 @@
 const uuid = require('uuid/v1');
-const Body = require(`./Body`);
+const MessageType = require(`./MessageType`);
+const Body = require(`./body/Body`);
 
 
 /**
@@ -42,7 +43,7 @@ class Request {
      * @param type
      * @param rest
      */
-    constructor({body, correlationId = uuid(), partitionKey, singleReplyExpected, replyTo, type, ...rest } = {}) {
+    constructor({body={}, correlationId = uuid(), partitionKey, singleReplyExpected, replyTo, type, ...rest } = {}) {
         const me = this;
 
         me.body = body;
@@ -53,6 +54,14 @@ class Request {
         me.type = type;
 
         Object.assign(this, rest);
+    }
+
+    get isRequest() {
+        return true;
+    }
+
+    get messageType() {
+        return MessageType.REQUEST_MESSAGE_TYPE;
     }
 
     get body() {
@@ -150,12 +159,13 @@ class Request {
 
     /**
      *
-     * @returns {{b: string, cId: *, pK: *, sre: *, rTo: *, t: *}}
+     * @returns {{ mt: number, b: string, cId: *, pK: *, sre: *, rTo: *, t: *}}
      */
     toObject() {
         const me = this;
 
         return {
+            mt: me.messageType,
             b: me.body.toString(),
             cId: me.correlationId,
             pK: me.partitionKey,

@@ -1,4 +1,5 @@
-const Body = require(`./Body`);
+const MessageType = require(`./MessageType`);
+const Body = require(`./body/Body`);
 
 
 /**
@@ -10,14 +11,14 @@ class Response {
      *
      * @param data
      */
-    static normalize(data) {
+    static normalize({ b, cId, l, err, fld } = {}) {
         return new Response({
-            body: Body.normalize(data.b ? JSON.parse(data.b) : {}),
-            correlationId: data.cId,
-            last: data.l,
-            errorCode: data.err,
-            failed: data.fld
-        })
+            body: Body.normalize(b ? JSON.parse(b) : {}),
+            correlationId: cId,
+            last: l,
+            errorCode: err,
+            failed: fld
+        });
     }
 
     /**
@@ -28,7 +29,7 @@ class Response {
      * @param errorCode
      * @param failed
      */
-    constructor({ body, correlationId, last, errorCode = 0, failed } = {}) {
+    constructor({ body={}, correlationId, last, errorCode = 0, failed } = {}) {
         const me = this;
 
         me.body = body;
@@ -36,6 +37,14 @@ class Response {
         me.last = last;
         me.errorCode = errorCode;
         me.failed = failed;
+    }
+
+    get isResponse() {
+        return true;
+    }
+
+    get messageType() {
+        return MessageType.RESPONSE_MESSAGE_TYPE;
     }
 
     get body() {
@@ -126,17 +135,18 @@ class Response {
 
     /**
      *
-     * @returns {{b: undefined, cId: *, l: *, err: *, fld: *}}
+     * @returns {{ mt: number, b: undefined, cId: *, l: *, err: *, fld: *}}
      */
     toObject() {
         const me = this;
 
         return {
-          b: me.body ? me.body.toObject() : undefined,
-          cId: me.correlationId,
-          l: me.last,
-          err: me.errorCode,
-          fld: me.failed
+            mt: me.messageType,
+            b: me.body ? me.body.toString() : undefined,
+            cId: me.correlationId,
+            l: me.last,
+            err: me.errorCode,
+            fld: me.failed
         };
     }
 

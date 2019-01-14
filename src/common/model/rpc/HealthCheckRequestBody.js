@@ -1,4 +1,4 @@
-const Body = require(`./Body`);
+const { Body } = require(`devicehive-message-bus-client`);
 
 
 class HealthCheckRequestBody extends Body {

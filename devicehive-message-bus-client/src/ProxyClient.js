@@ -1,6 +1,5 @@
 const debug = require(`debug`)(`proxy:client`);
-const Config = require(`../../config`).proxy;
-const Utils = require(`../utils/Utils`);
+const Utils = require(`./utils/Utils`);
 const WS = require(`ws`);
 const EventEmitter = require(`events`);
 const { Message, MessageUtils } = require(`devicehive-proxy-message`);
@@ -23,11 +22,7 @@ class ProxyClient extends EventEmitter {
      * @param config.autoReconnectIntervalMs {Number} auto reconnection interval in ms
      * @param config.persistMessageWhileReconnecting {Boolean} persist message while WS Proxy is nor reachable
      */
-    constructor({
-                    webSocketServerUrl = Config.WS_PROXY_ENDPOINT,
-                    autoReconnectIntervalMs = Config.RECONNECTION_INTERVAL_MS,
-                    persistMessageWhileReconnecting = Config.PERSIST_MESSAGE_WHILE_RECONNECTING
-                } = {}) {
+    constructor({ webSocketServerUrl, autoReconnectIntervalMs, persistMessageWhileReconnecting } = {}) {
         super();
 
         this.url = webSocketServerUrl;
@@ -189,4 +184,4 @@ class ProxyClient extends EventEmitter {
 }
 
 
-module.exports = new ProxyClient();
+module.exports = ProxyClient;

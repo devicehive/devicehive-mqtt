@@ -8,8 +8,8 @@ const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
+const messageBusDistributor = require('./proxy/MessageBusDistributor');
 
-require(`./proxy`);
 
 const appLogger = new ApplicationLogger(BrokerConfig.APP_LOG_LEVEL);
 const crossBrokerCommunicator = new CrossBrokerCommunicator();
@@ -75,6 +75,10 @@ wsManager.on('message', (clientId, message) => {
             appLogger.debug(`broker has published to private topic: "${topic}"`);
         }
     }
+});
+
+messageBusDistributor.on(`message`, (clientId, message) => {
+
 });
 
 server.authenticate = function (client, username, password, callback) {
@@ -148,6 +152,8 @@ server.on(`published`, (packet, client) => {
             if (topicStructure.isRequest()) {
                 wsManager.sendString(client.id, packet.payload.toString());
             }
+        } else if (messageBusDistributor.isRegistered(topicStructure.getDomain())) {
+            messageBusDistributor.publish(packet)
         } else {
             crossBrokerCommunicator.publish(packet.topic, packet.payload.toString());
         }
@@ -420,7 +426,17 @@ function brokerAuthorizeSubscriptionHandler (clientId, topic) {
                     }
                 }
             } else {
-                resolve();
+                const topicStructure = new TopicStructure(topic);
+
+                if (messageBusDistributor.isRegistered(topicStructure.getDomain())) {
+                    if (wsManager.isAuthorized(clientId)) {
+                        resolve();
+                    } else {
+                        reject(`Topics with domain "${topic}" is forbidden for subscription for not authorized clients`);
+                    }
+                } else {
+                    resolve();
+                }
             }
         } else {
             reject(`Topic "${topic}" is forbidden for subscription`);

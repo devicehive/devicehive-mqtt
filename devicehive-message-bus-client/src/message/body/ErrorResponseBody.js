@@ -1,5 +1,5 @@
 const Body = require(`./Body`);
-const Action = require(`./Action`);
+const Action = require(`../Action`);
 
 class ErrorResponseBody extends Body {
 

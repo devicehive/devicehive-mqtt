@@ -21,6 +21,7 @@
   "dependencies": {
     "cote": "^0.15.1",
     "debug": "^3.2.6",
+    "devicehive-message-bus-client": "^1.0.5",
     "devicehive-proxy-message": "^1.0.12",
     "fifo": "^2.3.0",
     "json-evn-configurator": "^1.0.6",
