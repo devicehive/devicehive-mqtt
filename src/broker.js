@@ -8,7 +8,7 @@ const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
-const messageBusDistributor = require('./proxy/MessageBusDistributor');
+const { messageBusDistributor } = require('./message-bus');
 
 
 const appLogger = new ApplicationLogger(BrokerConfig.APP_LOG_LEVEL);
@@ -77,8 +77,11 @@ wsManager.on('message', (clientId, message) => {
     }
 });
 
-messageBusDistributor.on(`message`, (clientId, message) => {
-
+messageBusDistributor.on(`message`, (domain, subDomain, clientId, data) => {
+    server.publish({
+        topic: `${domain}/${subDomain}`,
+        payload: data
+    });
 });
 
 server.authenticate = function (client, username, password, callback) {
@@ -153,7 +156,7 @@ server.on(`published`, (packet, client) => {
                 wsManager.sendString(client.id, packet.payload.toString());
             }
         } else if (messageBusDistributor.isRegistered(topicStructure.getDomain())) {
-            messageBusDistributor.publish(packet)
+            messageBusDistributor.publish(packet.topic, packet)
         } else {
             crossBrokerCommunicator.publish(packet.topic, packet.payload.toString());
         }

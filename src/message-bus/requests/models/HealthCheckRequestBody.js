@@ -3,7 +3,7 @@ const { Body } = require(`devicehive-message-bus-client`);
 
 class HealthCheckRequestBody extends Body {
 
-    constructor({ deviceCommand, ...rest } = {}) {
+    constructor({ ...rest } = {}) {
         super({ ...rest });
     }
 }

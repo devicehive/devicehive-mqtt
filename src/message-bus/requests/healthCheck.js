@@ -1,6 +1,6 @@
 const { Response } = require(`devicehive-message-bus-client`);
-const HealthCheckRequestBody = require(`../../common/model/rpc/HealthCheckRequestBody`);
-const HealthCheckResponseBody = require(`../../common/model/rpc/HealthCheckResponseBody`);
+const HealthCheckRequestBody = require(`./models/HealthCheckRequestBody`);
+const HealthCheckResponseBody = require(`./models/HealthCheckResponseBody`);
 
 
 /**
