@@ -10,27 +10,25 @@ class BrokerProcessMonitoring {
      * Create new BrokerProcessMonitoring
      */
     constructor () {
-        const me = this;
+        this.uptime = 0;
+        this.connectedClients = 0;
+        this.maximumClients = 0;
+        this.connectionLoad = 0;
+        this.publishingLoad = 0;
+        this.heapCurrent = 0;
+        this.heapMaximum = 0;
+        this.publishedCount = 0;
+        this.startAt = 0;
 
-        me.uptime = 0;
-        me.connectedClients = 0;
-        me.maximumClients = 0;
-        me.connectionLoad = 0;
-        me.publishingLoad = 0;
-        me.heapCurrent = 0;
-        me.heapMaximum = 0;
-        me.publishedCount = 0;
-        me.startAt = 0;
-
-        me._addPmxProbeMetric(`uptime`, `Uptime`);
-        me._addPmxProbeMetric(`connectedClients`, `Connected clients`);
-        me._addPmxProbeMetric(`connectionLoad`, `Connection load (5 min)`);
-        me._addPmxProbeMetric(`maximumClients`, `Maximum clients`);
-        me._addPmxProbeMetric(`publishingLoad`, `Publishing load`);
-        me._addPmxProbeMetric(`heapCurrent`, `Current heap`);
-        me._addPmxProbeMetric(`heapMaximum`, `Maximum heap`);
-        me._addPmxProbeMetric(`publishedCount`, `Publishing count (5 min)`);
-        me._addPmxProbeMetric(`startAt`, `Start at`);
+        this._addPmxProbeMetric(`uptime`, `Uptime`);
+        this._addPmxProbeMetric(`connectedClients`, `Connected clients`);
+        this._addPmxProbeMetric(`connectionLoad`, `Connection load (5 min)`);
+        this._addPmxProbeMetric(`maximumClients`, `Maximum clients`);
+        this._addPmxProbeMetric(`publishingLoad`, `Publishing load`);
+        this._addPmxProbeMetric(`heapCurrent`, `Current heap`);
+        this._addPmxProbeMetric(`heapMaximum`, `Maximum heap`);
+        this._addPmxProbeMetric(`publishedCount`, `Publishing count (5 min)`);
+        this._addPmxProbeMetric(`startAt`, `Start at`);
     }
 
     /**
@@ -40,12 +38,10 @@ class BrokerProcessMonitoring {
      * @private
      */
     _addPmxProbeMetric(metricName, description) {
-        const me = this;
-
-        me[`${metricName}Metric`] = probe.metric({
+        this[`${metricName}Metric`] = probe.metric({
             name: description,
-            value: function () {
-                return me[metricName];
+            value: () => {
+                return this[metricName];
             }
         });
     }
@@ -56,35 +52,33 @@ class BrokerProcessMonitoring {
      * @param value
      */
     updateMetric (metricName, value) {
-        const me = this;
-
         switch (metricName) {
             case CONST.MQTT.BROKER_STATS_TOPICS.UPTIME:
-                me.uptime = value;
+                this.uptime = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.CLIENTS_CONNECTED:
-                me.connectedClients = value;
+                this.connectedClients = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.CLIENTS_MAXIMUM:
-                me.maximumClients = value;
+                this.maximumClients = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.LOAD_CONNECTIONS:
-                me.connectionLoad = value;
+                this.connectionLoad = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.LOAD_PUBLISH_RECEIVED:
-                me.publishingLoad = value;
+                this.publishingLoad = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.MEMORY_HEAP_CURRENT:
-                me.heapCurrent = value;
+                this.heapCurrent = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.MEMORY_HEAP_MAXIMUM:
-                me.heapMaximum = value;
+                this.heapMaximum = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.PUBLISH_RECEIVED:
-                me.publishedCount = value;
+                this.publishedCount = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.START_AT:
-                me.startAt = value;
+                this.startAt = value;
                 break;
         }
     }

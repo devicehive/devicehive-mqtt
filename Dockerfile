@@ -1,4 +1,4 @@
-FROM node:10.1.0-alpine
+FROM node:18.5-alpine
 
 MAINTAINER devicehive
 
@@ -16,10 +16,7 @@ WORKDIR ${WORK_DIR}
 
 COPY . ${WORK_DIR}
 
-RUN apk add --no-cache --virtual .gyp \
-        python make  g++ \
-  && npm install \
-  && apk del .gyp \
+RUN npm install \
   && npm install pm2 -g \
   && npm cache clean --force
 

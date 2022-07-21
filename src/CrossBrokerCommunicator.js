@@ -15,15 +15,13 @@ class CrossBrokerCommunicator extends EventEmitter {
     constructor() {
         super();
 
-        const me = this;
+        this.id = randomString.generate();
+        this.publisher = new cote.Publisher({ name: `CrossBrokerCommunicator` });
+        this.subscriber = new cote.Subscriber({ name: `CrossBrokerCommunicator` });
 
-        me.id = randomString.generate();
-        me.publisher = new cote.Publisher({ name: `CrossBrokerCommunicator` });
-        me.subscriber = new cote.Subscriber({ name: `CrossBrokerCommunicator` });
-
-        me.subscriber.on(`message`, (data) => {
-            if (data.id !== me.id) {
-                me.emit(`message`, data.topic, data.payload);
+        this.subscriber.on(`message`, (data) => {
+            if (data.id !== this.id) {
+                this.emit(`message`, data.topic, data.payload);
             }
         });
     }
@@ -34,12 +32,10 @@ class CrossBrokerCommunicator extends EventEmitter {
      * @param payload
      */
     publish(topic, payload) {
-        const me = this;
-
-        me.publisher.publish(`message`, {
+        this.publisher.publish(`message`, {
             topic: topic,
             payload: payload,
-            id: me.id
+            id: this.id
         });
     }
 }

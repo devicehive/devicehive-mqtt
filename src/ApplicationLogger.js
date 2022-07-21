@@ -1,5 +1,4 @@
 const winston = require(`winston`);
-const config = winston.config;
 
 
 /**
@@ -11,39 +10,12 @@ class ApplicationLogger {
      * Create new ApplicationLogger
      */
     constructor (loggingLevel) {
-        const me = this;
-        const loggerConfig = {
-            levels: {
-                debug: 3,
-                info: 2,
-                warn: 1,
-                error: 0
-            },
-            colors: {
-                debug: `yellow`,
-                info: `green`,
-                warn: `red`,
-                error: `red`
-            },
+        this.logger = winston.createLogger({
+            level: loggingLevel,
             transports: [
-                new (winston.transports.Console)({
-                    colorize: true,
-                    level: loggingLevel,
-                    timestamp: () => (new Date()).toISOString(),
-                    formatter: (options) => {
-                        const pid = process.pid;
-                        const level = config.colorize(options.level, options.level.toUpperCase());
-                        const message = options.message;
-                        const timeStamp = config.colorize(options.level, options.timestamp());
-
-                        return `BROKER(${pid}) ${level}: ${message} --- ${timeStamp}`;
-                    }
-                })
-            ],
-            filters: [(level, msg) => msg.replace(/(\r\n|\n|\r)/gm, ``)]
-        };
-
-        me.logger = new (winston.Logger)(loggerConfig);
+                new winston.transports.Console()
+            ]
+        });
     }
 
     /**
@@ -51,9 +23,7 @@ class ApplicationLogger {
      * @param str
      */
     err (str) {
-        const me = this;
-
-        me.logger.error(str);
+        this.logger.error(str);
     }
 
     /**
@@ -61,9 +31,7 @@ class ApplicationLogger {
      * @param str
      */
     warn (str) {
-        const me = this;
-
-        me.logger.warn(str);
+        this.logger.warn(str);
     }
 
     /**
@@ -71,9 +39,7 @@ class ApplicationLogger {
      * @param str
      */
     info (str) {
-        const me = this;
-
-        me.logger.info(str);
+        this.logger.info(str);
     }
 
     /**
@@ -81,9 +47,7 @@ class ApplicationLogger {
      * @param str
      */
     debug (str) {
-        const me = this;
-
-        me.logger.debug(str);
+        this.logger.debug(str);
     }
 }
 

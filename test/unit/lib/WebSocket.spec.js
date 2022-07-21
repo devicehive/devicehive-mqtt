@@ -6,7 +6,6 @@ const expect = chai.expect;
 
 
 describe(WebSocket.name, () => {
-    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`, `sendString`];
     const testMessage = 'testMessage';
     const WS_SERVER_PORT = 9090;
     const WS_SERVER_URL = `ws://127.0.0.1:${WS_SERVER_PORT}`;
@@ -14,12 +13,6 @@ describe(WebSocket.name, () => {
 
     it(`should be a class`, () => {
         expect(WebSocket).to.be.a(`Function`);
-    });
-
-    it(`should has next methods: ${listOfMethods.join(`, `)}`, () => {
-        listOfMethods.forEach((methodName) => {
-            expect(new WebSocket(WS_SERVER_URL)[methodName]).to.be.a(`Function`);
-        });
     });
 
     describe(`Events`, () => {
