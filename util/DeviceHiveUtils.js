@@ -1,6 +1,71 @@
 const CONST = require('./constants.json');
-const moscaUtils = require('../node_modules/mosca/lib/persistence/utils.js');
 const TopicStructure = require('../lib/TopicStructure.js');
+const LRU = require("lru-cache");
+const cache = new LRU({
+    max: 10000,
+    ttl: 1000 * 60 * 60
+});
+
+/**
+ * Generate the possible patterns that might match a topic.
+ *
+ * @param {String} topic
+ * @return the list of the patterns
+ */
+function _topicPatterns(topic) {
+    let parts = topic.split("/");
+    let patterns = [topic];
+    let i, a = [], b = [], j, k, h, list = [];
+
+    for (j=1; j < parts.length; j++) {
+        list.length = 0; // clear the array
+
+        for (i=0; i < parts.length; i++) {
+            a.length = 0;
+            b.length = 0;
+
+            list.push(i);
+            for (h = 1; list.length < j; h++) {
+                list.unshift(parts.length - h);
+            }
+
+            for (k=0; k < parts.length; k++) {
+                if (list.indexOf(k) >= 0) {
+                    a.push(parts[k]);
+                    b.push(parts[k]);
+                } else {
+                    if (k === 0 || a[a.length - 1] !== "#") {
+                        a.push("#");
+                    }
+                    b.push("+");
+                }
+            }
+
+            patterns.push(a.join("/"));
+            patterns.push(b.join("/"));
+            list.shift();
+        }
+    }
+
+    return patterns;
+}
+
+/**
+ * Generate the possible patterns that might match a topic.
+ * Memozied version.
+ *
+ * @param {String} topic
+ * @return the list of the patterns
+ */
+function topicPatterns(topic) {
+    let result = cache.get(topic);
+    if (!result) {
+        result = _topicPatterns(topic);
+    }
+    cache.set(topic, result);
+    return result;
+}
+
 
 /**
  * Device Hive Util class
@@ -65,7 +130,7 @@ class DeviceHiveUtils {
      */
     static isLessGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        const topicToCheckPatterns = moscaUtils.topicPatterns(topicToCheck);
+        const topicToCheckPatterns = topicPatterns(topicToCheck);
 
         if (topicToCheckPatterns.includes(topicToCompare)) {
             result = true;
@@ -82,7 +147,7 @@ class DeviceHiveUtils {
      */
     static isMoreGlobalTopic (topicToCheck, topicToCompare) {
         let result = false;
-        const topicToComparePatterns = moscaUtils.topicPatterns(topicToCompare);
+        const topicToComparePatterns = topicPatterns(topicToCompare);
 
         if (topicToComparePatterns.includes(topicToCheck)) {
             result = true;

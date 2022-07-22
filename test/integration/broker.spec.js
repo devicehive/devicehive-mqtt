@@ -523,5 +523,4 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             }, 4500);
         }).timeout(5000);
     });
-
 });

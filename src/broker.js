@@ -1,40 +1,35 @@
-const BrokerConfig = require(`../config`).broker;
+const net = require('net');
+const aedes = require('aedes');
+const mqEmitter = require('mqemitter-redis');
+const redisPersistence = require('aedes-persistence-redis');
+const {broker: BrokerConfig} = require(`../config`);
 const CONST = require('../util/constants.json');
-const mosca = require('mosca');
 const ApplicationLogger = require(`./ApplicationLogger.js`);
-const CrossBrokerCommunicator = require(`./CrossBrokerCommunicator.js`);
 const BrokerProcessMonitoring = require(`./BrokerProcessMonitoring.js`);
 const WebSocketManager = require('../lib/WebSocketManager.js');
 const TopicStructure = require('../lib/TopicStructure.js');
 const SubscriptionManager = require('../lib/SubscriptionManager.js');
 const DeviceHiveUtils = require('../util/DeviceHiveUtils.js');
 
-
 const appLogger = new ApplicationLogger(BrokerConfig.APP_LOG_LEVEL);
-const crossBrokerCommunicator = new CrossBrokerCommunicator();
 const brokerProcessMonitoring = new BrokerProcessMonitoring();
 const subscriptionManager = new SubscriptionManager();
 const wsManager = new WebSocketManager(BrokerConfig.WS_SERVER_URL);
-const server = new mosca.Server({
-    port: BrokerConfig.BROKER_PORT,
-    http: {
-        port: BrokerConfig.BROKER_WS_PORT,
-        bundle: true,
-        static: './'
-    },
-    stats: true,
-    persistence: {
-        factory: mosca.persistence.Redis,
+const mqttServer = aedes({
+    mq: mqEmitter({
         host: BrokerConfig.REDIS_SERVER_HOST,
-        port: BrokerConfig.REDIS_SERVER_PORT,
-        ttl: {
-            subscriptions: CONST.PERSISTENCE.MAX_NUMBER_OF_SUBSCRIPTIONS,
-            packets: CONST.PERSISTENCE.MAX_NUMBER_OF_PACKETS
-        }
-    }
+        port: BrokerConfig.REDIS_SERVER_PORT
+    }),
+    persistence: redisPersistence({
+        host: BrokerConfig.REDIS_SERVER_HOST,
+        port: BrokerConfig.REDIS_SERVER_PORT
+    })
 });
+const server = net.createServer(mqttServer.handle);
 
-crossBrokerCommunicator.on(`message`, (topic, payload) => server.publish({ topic: topic, payload: payload }));
+server.listen(BrokerConfig.BROKER_PORT, () => {
+    appLogger.info('MQTT Server is listening on port:', BrokerConfig.BROKER_PORT);
+});
 
 wsManager.on('message', (clientId, message) => {
     const messageObject = JSON.parse(message.data);
@@ -48,16 +43,14 @@ wsManager.on('message', (clientId, message) => {
             if (messageObject.action === DeviceHiveUtils.getTopicSubscriptionResponseAction(topic)) {
                 const mostGlobalTopic = subscriptionManager.getAllSubjects()
                     .filter((existingTopic) => DeviceHiveUtils.isSameTopicRoot(existingTopic, topic))
-                    .sort((topic1, topic2) => !DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2))[0];
+                    .sort((topic1, topic2) => DeviceHiveUtils.isMoreGlobalTopic(topic1, topic2) ? 1 : -1)[0];
 
                 if (mostGlobalTopic === topic) {
                     (subscriptionManager.getSubscriptionExecutor(topic, () => {
-                        server.publish({
+                        mqttServer.publish({
                             topic: TopicStructure.toTopicString(messageObject),
                             payload: message.data
-                        });
-
-                        appLogger.debug(`broker has published to topic: "${topic}"`);
+                        }, () => appLogger.debug(`broker has published to topic: "${topic}"`));
                     }))();
                 }
             }
@@ -66,29 +59,27 @@ wsManager.on('message', (clientId, message) => {
         const topic = TopicStructure.toTopicString(messageObject, clientId);
 
         if (subscriptionManager.hasSubscriptionAttempt(clientId, topic)) {
-            server.publish({
+            mqttServer.publish({
                 topic: topic,
                 payload: message.data
-            });
-
-            appLogger.debug(`broker has published to private topic: "${topic}"`);
+            }, () => appLogger.debug(`broker has published to private topic: "${topic}"`));
         }
     }
 });
 
-server.authenticate = function (client, username, password, callback) {
-    brokerAuthenticationHandler(client.id, username, password)
-        .then(() => {
-            appLogger.debug(`client with id: "${client.id}" has been authenticated`);
-            callback(null, true);
-        })
-        .catch((err) => {
-            appLogger.warn(`client with id: "${client.id}" has not been authenticated. Reason: ${err.toString()}`);
-            callback(err, false);
-        });
+mqttServer.authenticate = async (client, username, password, done) => {
+    try {
+        await brokerAuthenticationHandler(client.id, username, password);
+        appLogger.debug(`client with id: "${client.id}" has been authenticated`);
+        done(null, true);
+    } catch (err) {
+        appLogger.warn(`client with id: "${client.id}" has not been authenticated. Reason: ${err.toString()}`);
+        done(err, false);
+    }
 };
 
-server.authorizePublish = function (client, topic, payload, callback) {
+mqttServer.authorizePublish = (client, packet, done) => {
+    const {topic} = packet;
     const topicStructure = new TopicStructure(topic);
     const isAuthorized = topicStructure.isDH() ? topicStructure.isRequest() || 'ignore' : true;
 
@@ -100,97 +91,100 @@ server.authorizePublish = function (client, topic, payload, callback) {
         wsManager.lock(client.id);
     }
 
-    callback(null, isAuthorized);
+    done(null, isAuthorized);
 };
 
-server.authorizeForward = function (client, packet, callback) {
-    const topicStructure = new TopicStructure(packet.topic);
+mqttServer.authorizeForward = (client, packet) => {
+    const {topic} = packet;
+    const topicStructure = new TopicStructure(topic);
     const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
 
     isAuthorized === true ?
-        appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${packet.topic}"`) :
-        appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${packet.topic}"`);
+        appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${topic}"`) :
+        appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${topic}"`);
 
-    callback(null, isAuthorized);
+    return packet;
 };
 
-server.authorizeSubscribe = function (client, topic, callback) {
-    brokerAuthorizeSubscriptionHandler(client.id, topic)
-        .then(() => {
-            appLogger.debug(`client with id: "${client.id}" has been subscribed for topic: "${topic}"`);
-            callback(null, true);
-        })
-        .catch((err) => {
-            appLogger.warn(`client with id: "${client.id}" has not been subscribed for topic: "${topic}". Reason: ${err.toString()}`);
-            callback(null, false);
-        });
+mqttServer.authorizeSubscribe = async (client, subscription, done) => {
+    const {topic} = subscription;
+
+    try {
+        await brokerAuthorizeSubscriptionHandler(client.id, topic);
+        appLogger.debug(`client with id: "${client.id}" has been subscribed for topic: "${topic}"`);
+        done(null, {clientId: client.id, ...subscription});
+    } catch (err) {
+        appLogger.warn(`client with id: "${client.id}" has not been subscribed for topic: "${topic}". Reason: ${err.toString()}`);
+        done(null, false);
+    }
 };
 
-server.on(`ready`, () => {
-    appLogger.info(`broker has been started on port: ${BrokerConfig.BROKER_PORT}`);
-});
-
-server.on(`clientConnected`, (client) => {
+mqttServer.on(`client`, (client) => {
     appLogger.info(`client with id: "${client.id}" connected`);
 });
 
-server.on(`clientDisconnected`, (client) => {
-    wsManager.close(client.id);
-    appLogger.info(`client with id: "${client.id}" disconnected`);
+mqttServer.on(`clientDisconnect`, (client) => {
+    process.nextTick(() => {
+        wsManager.close(client.id);
+        appLogger.info(`client with id: "${client.id}" disconnected`);
+    });
 });
 
-server.on(`published`, (packet, client) => {
+mqttServer.on(`publish`, (packet, client) => {
+    const {topic, payload} = packet;
+
     if (client) {
-        const topicStructure = new TopicStructure(packet.topic);
+        const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isDH()) {
             if (topicStructure.isRequest()) {
-                wsManager.sendString(client.id, packet.payload.toString());
+                wsManager.sendString(client.id, payload.toString());
             }
-        } else {
-            crossBrokerCommunicator.publish(packet.topic, packet.payload.toString());
         }
 
-        appLogger.debug(`client with id: "${client.id}" has published to topic: "${packet.topic}"`);
+        appLogger.debug(`client with id: "${client.id}" has published to topic: "${topic}"`);
 
         wsManager.unlock(client.id);
     } else {
-        if (isBrokerSYSTopic(packet.topic)) {
-            brokerProcessMonitoring.updateMetric(convertTopicToMetricName(packet.topic), packet.payload.toString());
+        if (isBrokerSYSTopic(topic)) {
+            brokerProcessMonitoring.updateMetric(convertTopicToMetricName(topic), payload.toString());
         }
     }
 });
 
-server.on('unsubscribed', (topic, client) => {
-    if (isDeviceHiveTopic(topic)) {
-        const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
+mqttServer.on('unsubscribe', async (unsubscriptions, client) => {
+    for (let topic of unsubscriptions) {
+        if (isDeviceHiveTopic(topic)) {
+            const subscriptionId = subscriptionManager.findSubscriptionId(client.id, topic);
 
-        subscriptionManager.removeSubscriptionAttempt(client.id, topic);
+            subscriptionManager.removeSubscriptionAttempt(client.id, topic);
 
-        if (isDeviceHiveEventSubscriptionTopic(topic) && subscriptionId) {
-            unsubscribe(client.id, topic, subscriptionId)
-                .then(() => {
+            if (isDeviceHiveEventSubscriptionTopic(topic) && subscriptionId) {
+                try {
+                    await unsubscribe(client.id, topic, subscriptionId);
+
                     subscribeToNextMostGlobalTopic(client.id, topic);
                     subscriptionManager.removeSubjectSubscriber(topic, client.id);
 
                     appLogger.debug(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
-                })
-                .catch((err) => appLogger.warn(`client with id: "${client.id}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
+                } catch (err) {
+                    appLogger.warn(`client with id: "${client.id}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`);
+                }
+            } else {
+                appLogger.debug(`client with id: "${client.id}" has unsubscribed from DeviceHive topic: ${topic}`);
+            }
         } else {
-            appLogger.debug(`client with id: "${client.id}" has unsubscribed from DeviceHive topic: ${topic}`);
+            appLogger.debug(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
         }
-    } else {
-        appLogger.debug(`client with id: "${client.id}" has unsubscribed from topic: ${topic}`);
     }
 });
-
 
 /**
  * Part of broker flow. Check that the topic is forbidden to subscribe
  * @param topic
  * @returns {boolean}
  */
-function isTopicForbidden (topic) {
+function isTopicForbidden(topic) {
     return CONST.TOPICS.FORBIDDEN.START_WITH.some(str => str.startsWith(topic));
 }
 
@@ -199,7 +193,7 @@ function isTopicForbidden (topic) {
  * @param topic
  * @returns {boolean}
  */
-function isDeviceHiveEventSubscriptionTopic (topic) {
+function isDeviceHiveEventSubscriptionTopic(topic) {
     const topicStructure = new TopicStructure(topic);
     return topicStructure.isDH() && topicStructure.isSubscription() &&
         (topicStructure.isNotification() || topicStructure.isCommandInsert() || topicStructure.isCommandUpdate());
@@ -211,7 +205,7 @@ function isDeviceHiveEventSubscriptionTopic (topic) {
  * @param topic
  * @returns {boolean}
  */
-function hasMoreGlobalTopicAttempts (clientId, topic) {
+function hasMoreGlobalTopicAttempts(clientId, topic) {
     return subscriptionManager.getSubscriptionAttempts(clientId)
         .some((subjectAttempt) => DeviceHiveUtils.isMoreGlobalTopic(subjectAttempt, topic));
 }
@@ -222,7 +216,7 @@ function hasMoreGlobalTopicAttempts (clientId, topic) {
  * @param topic
  * @returns {Promise.<Object>}
  */
-function subscribe (clientId, topic) {
+function subscribe(clientId, topic) {
     return wsManager.send(clientId, DeviceHiveUtils.createSubscriptionDataObject(topic));
 }
 
@@ -234,7 +228,7 @@ function subscribe (clientId, topic) {
  * @param subscriptionId
  * @returns {Promise.<Object>}
  */
-function unsubscribe (clientId, topic, subscriptionId) {
+function unsubscribe(clientId, topic, subscriptionId) {
     return wsManager.send(clientId, {
         action: DeviceHiveUtils.getTopicUnsubscribeRequestAction(topic),
         subscriptionId: subscriptionId
@@ -247,7 +241,7 @@ function unsubscribe (clientId, topic, subscriptionId) {
  * @param clientId
  * @param topic
  */
-function unsubscribeFromLessGlobalTopics (clientId, topic) {
+function unsubscribeFromLessGlobalTopics(clientId, topic) {
     subscriptionManager.getSubjects(clientId)
         .filter((subscription) => DeviceHiveUtils.isMoreGlobalTopic(topic, subscription))
         .forEach((topicToUnsubscribe) => {
@@ -256,7 +250,7 @@ function unsubscribeFromLessGlobalTopics (clientId, topic) {
             if (subscriptionId) {
                 unsubscribe(clientId, topicToUnsubscribe, subscriptionId)
                     .then(() => subscriptionManager.removeSubjectSubscriber(topicToUnsubscribe, clientId))
-                    .catch((err) => appLogger.warn(`client with id: "${clientid}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
+                    .catch((err) => appLogger.warn(`client with id: "${clientId}" has problems with unsubscribing from topic: ${topic}: ${err.toString()}`));
             }
         });
 }
@@ -268,7 +262,7 @@ function unsubscribeFromLessGlobalTopics (clientId, topic) {
  * @param topic
  * @returns {boolean}
  */
-function isSubscriptionActual (clientId, topic) {
+function isSubscriptionActual(clientId, topic) {
     return subscriptionManager.hasSubscriptionAttempt(clientId, topic);
 }
 
@@ -278,11 +272,11 @@ function isSubscriptionActual (clientId, topic) {
  * @param clientId
  * @param topic
  */
-function subscribeToNextMostGlobalTopic (clientId, topic) {
+function subscribeToNextMostGlobalTopic(clientId, topic) {
     const subscriberSubscriptions = subscriptionManager.getSubscriptionAttempts(clientId);
     const nextMostGlobalTopic = subscriberSubscriptions
         .filter((existingSubject) => DeviceHiveUtils.isLessGlobalTopic(existingSubject, topic))
-        .sort((subject1, subject2) => !DeviceHiveUtils.isMoreGlobalTopic(subject1, subject2))[0];
+        .sort((subject1, subject2) => DeviceHiveUtils.isMoreGlobalTopic(subject1, subject2) ? 1 : -1)[0];
 
     if (nextMostGlobalTopic) {
         subscribe(clientId, nextMostGlobalTopic)
@@ -297,7 +291,7 @@ function subscribeToNextMostGlobalTopic (clientId, topic) {
  * @param topic
  * @returns {boolean}
  */
-function isDeviceHiveResponseSubscriptionTopic (topic) {
+function isDeviceHiveResponseSubscriptionTopic(topic) {
     const topicStructure = new TopicStructure(topic);
 
     return topicStructure.isDH() && topicStructure.isResponse();
@@ -308,7 +302,7 @@ function isDeviceHiveResponseSubscriptionTopic (topic) {
  * @param topic
  * @return {boolean}
  */
-function isDeviceHiveTopic (topic) {
+function isDeviceHiveTopic(topic) {
     return (new TopicStructure(topic)).isDH();
 }
 
@@ -317,7 +311,7 @@ function isDeviceHiveTopic (topic) {
  * @param topic
  * @return {boolean}
  */
-function isDeviceHiveTokensOrAuthResponseTopic (topic) {
+function isDeviceHiveTokensOrAuthResponseTopic(topic) {
     const topicStructure = new TopicStructure(topic);
     const action = topicStructure.getAction();
 
@@ -330,7 +324,7 @@ function isDeviceHiveTokensOrAuthResponseTopic (topic) {
  * @param messageObject
  * @param clientId
  */
-function handleTokenAndAuthResponses (messageObject, clientId) {
+function handleTokenAndAuthResponses(messageObject, clientId) {
     if (messageObject.status === CONST.WS.SUCCESS_STATUS && wsManager.hasKey(clientId)) {
         switch (messageObject.action) {
             case CONST.WS.ACTIONS.TOKEN:
@@ -350,24 +344,21 @@ function handleTokenAndAuthResponses (messageObject, clientId) {
  * @param password
  * @return {Promise}
  */
-function brokerAuthenticationHandler (clientId, username, password) {
-    return new Promise((resolve, reject) => {
-        if (!wsManager.hasKey(clientId)) {
-            if (username && password) {
-                wsManager.createTokens(clientId, username, password.toString())
-                    .then(({ accessToken, refreshToken }) => wsManager.authenticate(clientId, accessToken))
-                    .then(() => process.nextTick(() => resolve()))
-                    .catch((err) => process.nextTick(() => {
-                        wsManager.close(clientId);
-                        reject(err);
-                    }));
-            } else {
-                resolve();
+async function brokerAuthenticationHandler(clientId, username, password) {
+    if (!wsManager.hasKey(clientId)) {
+        if (username && password) {
+            try {
+                const {accessToken} = await wsManager.createTokens(clientId, username, password.toString());
+                await wsManager.authenticate(clientId, accessToken);
+                return await Promise.resolve();
+            } catch (err) {
+                wsManager.close(clientId);
+                throw err;
             }
-        } else {
-            reject(new Error(`User with id ${clientId} already connected`));
         }
-    });
+    } else {
+        throw new Error(`User with id ${clientId} already connected`);
+    }
 }
 
 /**
@@ -376,55 +367,43 @@ function brokerAuthenticationHandler (clientId, username, password) {
  * @param topic
  * @return {Promise}
  */
-function brokerAuthorizeSubscriptionHandler (clientId, topic) {
-    return new Promise((resolve, reject) => {
-        if (!isTopicForbidden(topic)) {
-            if (isDeviceHiveTopic(topic)) {
-                if (wsManager.isAuthorized(clientId)) {
-                    if (isDeviceHiveEventSubscriptionTopic(topic)) {
-                        if (!hasMoreGlobalTopicAttempts(clientId, topic)) {
-                            subscribe(clientId, topic)
-                                .then((subscriptionResponse) => {
-                                    if (isSubscriptionActual(clientId, topic)) {
-                                        unsubscribeFromLessGlobalTopics(clientId, topic);
-                                        subscriptionManager.addSubjectSubscriber(topic, clientId, subscriptionResponse.subscriptionId);
-                                        resolve();
-                                    } else {
-                                        unsubscribe(clientId, topic, subscriptionResponse.subscriptionId)
-                                            .then(() => process.nextTick(() => reject(`Subscription is not actual anymore`)))
-                                            .catch((err) => process.nextTick(() => {
-                                                appLogger.warn(`Problem while unsubscribing client from not actual topic "${topic}". Reason: ${err.toString()}`);
-                                            }));
-                                    }
-                                })
-                                .catch((err) => process.nextTick(() => reject(err)));
-                        } else {
-                            resolve();
-                        }
+async function brokerAuthorizeSubscriptionHandler(clientId, topic) {
+    if (!isTopicForbidden(topic)) {
+        if (isDeviceHiveTopic(topic)) {
+            if (wsManager.isAuthorized(clientId)) {
+                if (isDeviceHiveEventSubscriptionTopic(topic)) {
+                    if (!hasMoreGlobalTopicAttempts(clientId, topic)) {
+                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
 
-                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
-                    } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
-                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
-                        resolve();
-                    } else {
-                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
-                        resolve();
+                        const {subscriptionId} = await subscribe(clientId, topic);
+
+                        if (isSubscriptionActual(clientId, topic)) {
+                            unsubscribeFromLessGlobalTopics(clientId, topic);
+                            subscriptionManager.addSubjectSubscriber(topic, clientId, subscriptionId);
+                        } else {
+                            try {
+                                await unsubscribe(clientId, topic, subscriptionId);
+
+                                return Promise.reject(`Subscription is not actual anymore`);
+                            } catch (err) {
+                                appLogger.warn(`Problem while unsubscribing client from not actual topic "${topic}". Reason: ${err.toString()}`);
+                            }
+                        }
                     }
+                } else if (isDeviceHiveResponseSubscriptionTopic(topic)) {
+                    subscriptionManager.addSubscriptionAttempt(clientId, topic);
                 } else {
-                    if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
-                        subscriptionManager.addSubscriptionAttempt(clientId, topic);
-                        resolve();
-                    } else {
-                        reject(`Topic "${topic}" is forbidden for subscription for not authorized clients`);
-                    }
+                    subscriptionManager.addSubscriptionAttempt(clientId, topic);
                 }
+            } else if (isDeviceHiveTokensOrAuthResponseTopic(topic)) {
+                subscriptionManager.addSubscriptionAttempt(clientId, topic);
             } else {
-                resolve();
+                throw new Error(`Topic "${topic}" is forbidden for subscription for not authorized clients`);
             }
-        } else {
-            reject(`Topic "${topic}" is forbidden for subscription`);
         }
-    });
+    } else {
+        throw new Error(`Topic "${topic}" is forbidden for subscription`);
+    }
 }
 
 /**
@@ -432,7 +411,7 @@ function brokerAuthorizeSubscriptionHandler (clientId, topic) {
  * @param topic
  * @return {boolean}
  */
-function isBrokerSYSTopic (topic) {
+function isBrokerSYSTopic(topic) {
     return topic.startsWith(`${CONST.MQTT.SYS_PREFIX}/${server.id}`);
 }
 
