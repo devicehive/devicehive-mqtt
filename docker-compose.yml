@@ -1,50 +1,41 @@
 version: '3'
 services:
-#  nginx:
-#      build: ./nginx
-#      container_name: nginx
-#      networks:
-#        - cote
-#      links:
-#        - broker1:broker1
-#        - broker2:broker2
-#      ports:
-#        - "1883:8883"
-#  broker1:
-#    build: .
-#    container_name: broker1
-#    networks:
-#      - cote
-#      - redis
-#    environment:
-#      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
-#      - BROKER.REDIS_SERVER_HOST=redis
-#      - BROKER.REDIS_SERVER_PORT=6379
-#      - BROKER.ENABLE_PM=false
-#      - BROKER.APP_LOG_LEVEL=debug
-#      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager
-#  broker2:
-#    build: .
-#    container_name: broker2
-#    networks:
-#      - cote
-#      - redis
-#    environment:
-#      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
-#      - BROKER.REDIS_SERVER_HOST=redis
-#      - BROKER.REDIS_SERVER_PORT=6379
-#      - BROKER.ENABLE_PM=false
-#      - BROKER.APP_LOG_LEVEL=debug
-#      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager
   redis:
     image: "redis:alpine"
     container_name: redis
-    networks:
-      - redis
     ports:
       - "6379:6379"
-networks:
-  redis:
-    driver: bridge
-  cote:
-    driver: bridge
+  nginx:
+      build: ./nginx
+      container_name: nginx
+      links:
+        - broker1:broker1
+        - broker2:broker2
+      ports:
+        - "1883:8883"
+  broker1:
+    build: .
+    container_name: broker1
+    links:
+      - redis
+    environment:
+      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
+      - BROKER.REDIS_SERVER_HOST=redis
+      - BROKER.REDIS_SERVER_PORT=6379
+      - BROKER.ENABLE_PM=false
+      - BROKER.APP_LOG_LEVEL=debug
+      - BROKER.BROKER_PORT=1883
+      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager
+  broker2:
+    build: .
+    container_name: broker2
+    links:
+      - redis
+    environment:
+      - BROKER.WS_SERVER_URL=ws://playground.devicehive.com/api/websocket
+      - BROKER.REDIS_SERVER_HOST=redis
+      - BROKER.REDIS_SERVER_PORT=6379
+      - BROKER.ENABLE_PM=false
+      - BROKER.APP_LOG_LEVEL=debug
+      - BROKER.BROKER_PORT=1883
+      - DEBUG=subscriptionmanager,websocketfactory,websocketmanager

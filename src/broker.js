@@ -1,5 +1,6 @@
 const net = require('net');
 const aedes = require('aedes');
+const aedesStats = require('aedes-stats')
 const mqEmitter = require('mqemitter-redis');
 const redisPersistence = require('aedes-persistence-redis');
 const {broker: BrokerConfig} = require(`../config`);
@@ -27,8 +28,10 @@ const mqttServer = aedes({
 });
 const server = net.createServer(mqttServer.handle);
 
+aedesStats(mqttServer, { interval: 5000 });
+
 server.listen(BrokerConfig.BROKER_PORT, () => {
-    appLogger.info('MQTT Server is listening on port:', BrokerConfig.BROKER_PORT);
+    appLogger.info(`MQTT Server is listening on port: ${BrokerConfig.BROKER_PORT}`);
 });
 
 wsManager.on('message', (clientId, message) => {
@@ -99,11 +102,15 @@ mqttServer.authorizeForward = (client, packet) => {
     const topicStructure = new TopicStructure(topic);
     const isAuthorized = topicStructure.hasOwner() ? topicStructure.getOwner() === client.id : true;
 
-    isAuthorized === true ?
-        appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${topic}"`) :
-        appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${topic}"`);
+    if (isAuthorized) {
+        if (!topicStructure.isDH() || mqttServer.id === packet.brokerId) {
+            appLogger.debug(`client with id: "${client.id}" has been authorized for receiving packet on the topic: "${topic}"`);
+            return packet;
+        }
+    }
 
-    return packet;
+    appLogger.warn(`client with id: "${client.id}" has not been authorized for receiving packet on the topic: "${topic}"`);
+    return null;
 };
 
 mqttServer.authorizeSubscribe = async (client, subscription, done) => {
@@ -412,7 +419,7 @@ async function brokerAuthorizeSubscriptionHandler(clientId, topic) {
  * @return {boolean}
  */
 function isBrokerSYSTopic(topic) {
-    return topic.startsWith(`${CONST.MQTT.SYS_PREFIX}/${server.id}`);
+    return topic.startsWith(`${CONST.MQTT.SYS_PREFIX}/${mqttServer.id}`);
 }
 
 /**
@@ -421,5 +428,5 @@ function isBrokerSYSTopic(topic) {
  * @return {string}
  */
 function convertTopicToMetricName(topic) {
-    return topic.split(`${CONST.MQTT.SYS_PREFIX}/${server.id}/`)[1];
+    return topic.split(`${CONST.MQTT.SYS_PREFIX}/${mqttServer.id}/`)[1];
 }

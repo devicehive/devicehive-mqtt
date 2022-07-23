@@ -10,15 +10,17 @@
     ],
     "SYS_PREFIX": "$SYS",
     "BROKER_STATS_TOPICS": {
-      "START_AT":"started_at",
       "UPTIME":"uptime",
-      "CLIENTS_MAXIMUM":"clients/maximum",
-      "CLIENTS_CONNECTED":"clients/connected",
-      "PUBLISH_RECEIVED":"publish/received",
-      "LOAD_CONNECTIONS":"load/connections/5min",
-      "LOAD_PUBLISH_RECEIVED":"load/publish/received/5min",
-      "MEMORY_HEAP_CURRENT":"memory/heap/current",
-      "MEMORY_HEAP_MAXIMUM":"memory/heap/maximum"
+      "TIME":"time",
+      "CLIENTS_TOTAL": "clients/total",
+      "CLIENTS_MAXIMUM": "clients/maximum",
+      "PUBLISH_SENT": "messages/publish/sent",
+      "MEMORY_HEAP_CURRENT": "memory/heap/current",
+      "MEMORY_HEAP_MAXIMUM": "memory/heap/maximum",
+      "CPU_USAGE": "cpu/usage",
+      "CPU_AVG_1": "cpu/avg/last/1",
+      "CPU_AVG_5": "cpu/avg/last/5",
+      "CPU_AVG_15": "cpu/avg/last/15"
     }
   },
   "PERSISTENCE": {
