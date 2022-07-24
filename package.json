@@ -10,7 +10,8 @@
         "format:check": "prettier --check .",
         "format:write": "prettier --write .",
         "lint:check": "eslint .",
-        "lint:fix": "eslint --fix ."
+        "lint:fix": "eslint --fix .",
+        "prepare": "husky install"
     },
     "repository": {
         "type": "git",
@@ -47,6 +48,7 @@
         "eslint": "^8.20.0",
         "eslint-config-google": "^0.14.0",
         "eslint-config-prettier": "^8.5.0",
+        "husky": "^8.0.1",
         "mocha": "^10.0.0",
         "mqtt": "^4.3.7",
         "prettier": "^2.7.1",
