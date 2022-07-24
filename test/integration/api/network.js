@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -27,13 +27,14 @@ const DELETE_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${DELETE_ACTION}`;
 const TEST_NETWORK_NAME = randomString.generate();
 const TEST_NETWORK_DESCRIPTION = randomString.generate();
 const UPDATED_TEST_NETWORK_DESCRIPTION = randomString.generate();
-let mqttClient, testNetworkId;
+let mqttClient;
+let testNetworkId;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -42,7 +43,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -50,61 +51,76 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${GET_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${GET_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${GET_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${LIST_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${LIST_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${LIST_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${INSERT_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${INSERT_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${INSERT_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${UPDATE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${UPDATE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${UPDATE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${DELETE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${DELETE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${DELETE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -121,14 +137,17 @@ it(`should create new network with name: "${TEST_NETWORK_NAME}" and description:
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: INSERT_ACTION,
-            requestId: requestId,
-            network: {
-                name: TEST_NETWORK_NAME,
-                description: TEST_NETWORK_DESCRIPTION
-            }
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: INSERT_ACTION,
+                requestId: requestId,
+                network: {
+                    name: TEST_NETWORK_NAME,
+                    description: TEST_NETWORK_DESCRIPTION,
+                },
+            })
+        );
     });
 });
 
@@ -141,16 +160,21 @@ it(`should query the network name: "${TEST_NETWORK_NAME} and description: "${TES
             expect(message.network).to.be.an(`object`);
             expect(message.network.id).to.equal(testNetworkId);
             expect(message.network.name).to.equal(TEST_NETWORK_NAME);
-            expect(message.network.description).to.equal(TEST_NETWORK_DESCRIPTION);
+            expect(message.network.description).to.equal(
+                TEST_NETWORK_DESCRIPTION
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            networkId: testNetworkId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                networkId: testNetworkId,
+            })
+        );
     });
 });
 
@@ -161,21 +185,29 @@ it(`should query the list of networks with existing network name: "${TEST_NETWOR
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.networks).to.be.an(`array`);
-            expect(message.networks.map((networkObject) => networkObject.id))
-                .to.include.members([testNetworkId]);
-            expect(message.networks.map((networkObject) => networkObject.name))
-                .to.include.members([TEST_NETWORK_NAME]);
-            expect(message.networks.map((networkObject) => networkObject.description))
-                .to.include.members([TEST_NETWORK_DESCRIPTION]);
+            expect(
+                message.networks.map((networkObject) => networkObject.id)
+            ).to.include.members([testNetworkId]);
+            expect(
+                message.networks.map((networkObject) => networkObject.name)
+            ).to.include.members([TEST_NETWORK_NAME]);
+            expect(
+                message.networks.map(
+                    (networkObject) => networkObject.description
+                )
+            ).to.include.members([TEST_NETWORK_DESCRIPTION]);
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            take: -1
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                take: -1,
+            })
+        );
     });
 });
 
@@ -189,14 +221,17 @@ it(`should update the network description: "${TEST_NETWORK_DESCRIPTION}" to "${U
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: UPDATE_ACTION,
-            requestId: requestId,
-            networkId: testNetworkId,
-            network: {
-                description: UPDATED_TEST_NETWORK_DESCRIPTION
-            }
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: UPDATE_ACTION,
+                requestId: requestId,
+                networkId: testNetworkId,
+                network: {
+                    description: UPDATED_TEST_NETWORK_DESCRIPTION,
+                },
+            })
+        );
     });
 });
 
@@ -209,16 +244,21 @@ it(`should query the updated network where updated description is: "${UPDATED_TE
             expect(message.network).to.be.an(`object`);
             expect(message.network.id).to.equal(testNetworkId);
             expect(message.network.name).to.equal(TEST_NETWORK_NAME);
-            expect(message.network.description).to.equal(UPDATED_TEST_NETWORK_DESCRIPTION);
+            expect(message.network.description).to.equal(
+                UPDATED_TEST_NETWORK_DESCRIPTION
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            networkId: testNetworkId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                networkId: testNetworkId,
+            })
+        );
     });
 });
 
@@ -232,11 +272,14 @@ it(`should delete the network"`, () => {
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: DELETE_ACTION,
-            requestId: requestId,
-            networkId: testNetworkId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: DELETE_ACTION,
+                requestId: requestId,
+                networkId: testNetworkId,
+            })
+        );
     });
 });
 
@@ -247,17 +290,21 @@ it(`should query the list of the networks without deleted network`, () => {
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.networks).to.be.an(`array`);
-            expect(message.networks.map((networkObject) => networkObject.id))
-                .to.not.include.members([testNetworkId]);
+            expect(
+                message.networks.map((networkObject) => networkObject.id)
+            ).to.not.include.members([testNetworkId]);
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            networkId: Config.NETWORK_ID
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                networkId: Config.NETWORK_ID,
+            })
+        );
     });
 });
 

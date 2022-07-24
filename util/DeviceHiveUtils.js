@@ -1,26 +1,32 @@
-const CONST = require('./constants.json');
-const TopicStructure = require('../lib/TopicStructure.js');
+const CONST = require("./constants.json");
+const TopicStructure = require("../lib/TopicStructure.js");
 const LRU = require("lru-cache");
 const cache = new LRU({
     max: 10000,
-    ttl: 1000 * 60 * 60
+    ttl: 1000 * 60 * 60,
 });
 
 /**
  * Generate the possible patterns that might match a topic.
  *
- * @param {String} topic
- * @return the list of the patterns
+ * @param {string} topic
+ * @return {Array} the list of the patterns
  */
 function _topicPatterns(topic) {
-    let parts = topic.split("/");
-    let patterns = [topic];
-    let i, a = [], b = [], j, k, h, list = [];
+    const parts = topic.split("/");
+    const patterns = [topic];
+    let i;
+    const a = [];
+    const b = [];
+    let j;
+    let k;
+    let h;
+    const list = [];
 
-    for (j=1; j < parts.length; j++) {
+    for (j = 1; j < parts.length; j++) {
         list.length = 0; // clear the array
 
-        for (i=0; i < parts.length; i++) {
+        for (i = 0; i < parts.length; i++) {
             a.length = 0;
             b.length = 0;
 
@@ -29,7 +35,7 @@ function _topicPatterns(topic) {
                 list.unshift(parts.length - h);
             }
 
-            for (k=0; k < parts.length; k++) {
+            for (k = 0; k < parts.length; k++) {
                 if (list.indexOf(k) >= 0) {
                     a.push(parts[k]);
                     b.push(parts[k]);
@@ -55,7 +61,7 @@ function _topicPatterns(topic) {
  * Memozied version.
  *
  * @param {String} topic
- * @return the list of the patterns
+ * @return {Array} the list of the patterns
  */
 function topicPatterns(topic) {
     let result = cache.get(topic);
@@ -66,18 +72,16 @@ function topicPatterns(topic) {
     return result;
 }
 
-
 /**
  * Device Hive Util class
  */
 class DeviceHiveUtils {
-
     /**
      * Create subscription object based on topic parameter
-     * @param topic
-     * @returns {Object}
+     * @param {string} topic
+     * @return {Object}
      */
-    static createSubscriptionDataObject (topic) {
+    static createSubscriptionDataObject(topic) {
         const topicStructure = new TopicStructure(topic);
         const result = {};
         const action = DeviceHiveUtils.getTopicSubscribeRequestAction(topic);
@@ -86,34 +90,51 @@ class DeviceHiveUtils {
         const deviceId = topicStructure.getDevice();
         const names = topicStructure.getNames();
 
-        if (action) { result.action = action; }
-        if (networkIds) { result.networkIds = networkIds; }
-        if (deviceTypeIds) { result.deviceTypeIds = deviceTypeIds; }
-        if (deviceId) { result.deviceId = deviceId; }
-        if (names) { result.names = names; }
-        if (topicStructure.isCommandUpdate()) { result.returnUpdatedCommands = true; }
+        if (action) {
+            result.action = action;
+        }
+        if (networkIds) {
+            result.networkIds = networkIds;
+        }
+        if (deviceTypeIds) {
+            result.deviceTypeIds = deviceTypeIds;
+        }
+        if (deviceId) {
+            result.deviceId = deviceId;
+        }
+        if (names) {
+            result.names = names;
+        }
+        if (topicStructure.isCommandUpdate()) {
+            result.returnUpdatedCommands = true;
+        }
 
         return result;
     }
 
     /**
      * Check for same topic root
-     * @param topic1
-     * @param topic2
-     * @returns {boolean}
+     * @param {string} topic1
+     * @param {string} topic2
+     * @return {boolean}
      */
-    static isSameTopicRoot (topic1, topic2) {
+    static isSameTopicRoot(topic1, topic2) {
         let result = true;
-        const splittedTopic1 = topic1.split('/');
-        const splittedTopic2 = topic2.split('/');
-        const smallestSize = splittedTopic1.length < splittedTopic2.length ?
-            splittedTopic1.length :
-            splittedTopic2.length;
+        const splittedTopic1 = topic1.split("/");
+        const splittedTopic2 = topic2.split("/");
+        const smallestSize =
+            splittedTopic1.length < splittedTopic2.length
+                ? splittedTopic1.length
+                : splittedTopic2.length;
 
         for (let counter = 0; counter < smallestSize; counter++) {
-            if (splittedTopic1[counter] !== splittedTopic2[counter] &&
-                !(CONST.MQTT.WILDCARDS.includes(splittedTopic1[counter]) ||
-                CONST.MQTT.WILDCARDS.includes(splittedTopic2[counter]))) {
+            if (
+                splittedTopic1[counter] !== splittedTopic2[counter] &&
+                !(
+                    CONST.MQTT.WILDCARDS.includes(splittedTopic1[counter]) ||
+                    CONST.MQTT.WILDCARDS.includes(splittedTopic2[counter])
+                )
+            ) {
                 result = false;
                 break;
             }
@@ -124,11 +145,11 @@ class DeviceHiveUtils {
 
     /**
      * Check if the topicToCheck is less global than the topicToCompare
-     * @param topicToCheck
-     * @param topicToCompare
-     * @returns {boolean}
+     * @param {string} topicToCheck
+     * @param {string} topicToCompare
+     * @return {boolean}
      */
-    static isLessGlobalTopic (topicToCheck, topicToCompare) {
+    static isLessGlobalTopic(topicToCheck, topicToCompare) {
         let result = false;
         const topicToCheckPatterns = topicPatterns(topicToCheck);
 
@@ -141,11 +162,11 @@ class DeviceHiveUtils {
 
     /**
      * Check if the topicToCheck is more global than the topicToCompare
-     * @param topicToCheck
-     * @param topicToCompare
-     * @returns {boolean}
+     * @param {string} topicToCheck
+     * @param {string} topicToCompare
+     * @return {boolean}
      */
-    static isMoreGlobalTopic (topicToCheck, topicToCompare) {
+    static isMoreGlobalTopic(topicToCheck, topicToCompare) {
         let result = false;
         const topicToComparePatterns = topicPatterns(topicToCompare);
 
@@ -158,17 +179,20 @@ class DeviceHiveUtils {
 
     /**
      * Get WS action for topic subscription
-     * @param topic
-     * @returns {string}
+     * @param {string} topic
+     * @return {string}
      */
-    static getTopicSubscribeRequestAction (topic) {
-        let action = '';
+    static getTopicSubscribeRequestAction(topic) {
+        let action = "";
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isSubscription()) {
             if (topicStructure.isNotification()) {
                 action = CONST.WS.ACTIONS.NOTIFICATION_SUBSCRIBE;
-            } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
+            } else if (
+                topicStructure.isCommandInsert() ||
+                topicStructure.isCommandUpdate()
+            ) {
                 action = CONST.WS.ACTIONS.COMMAND_SUBSCRIBE;
             }
         }
@@ -178,17 +202,20 @@ class DeviceHiveUtils {
 
     /**
      * Get WS action for topic unsubscription
-     * @param topic
-     * @returns {string}
+     * @param {string} topic
+     * @return {string}
      */
-    static getTopicUnsubscribeRequestAction (topic) {
-        let action = '';
+    static getTopicUnsubscribeRequestAction(topic) {
+        let action = "";
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isSubscription()) {
             if (topicStructure.isNotification()) {
                 action = CONST.WS.ACTIONS.NOTIFICATION_UNSUBSCRIBE;
-            } else if (topicStructure.isCommandInsert() || topicStructure.isCommandUpdate()) {
+            } else if (
+                topicStructure.isCommandInsert() ||
+                topicStructure.isCommandUpdate()
+            ) {
                 action = CONST.WS.ACTIONS.COMMAND_UNSUBSCRIBE;
             }
         }
@@ -198,11 +225,11 @@ class DeviceHiveUtils {
 
     /**
      * Get WS response action for topic
-     * @param topic
-     * @returns {string}
+     * @param {string} topic
+     * @return {string}
      */
-    static getTopicSubscriptionResponseAction (topic) {
-        let action = '';
+    static getTopicSubscriptionResponseAction(topic) {
+        let action = "";
         const topicStructure = new TopicStructure(topic);
 
         if (topicStructure.isSubscription()) {

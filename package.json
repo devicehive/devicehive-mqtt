@@ -1,41 +1,55 @@
 {
-  "name": "devicehive-mqtt",
-  "version": "1.1.0",
-  "description": "MQTT plugin for DeviceHive server",
-  "main": "src/broker.js",
-  "scripts": {
-    "test": "mocha test/unit/**/**.spec.js",
-    "unitTest": "mocha test/unit/**/**.spec.js",
-    "integrationTest": "mocha test/integration/**/**.spec.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/devicehive/devicehive-mqtt.git"
-  },
-  "author": "",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/devicehive/devicehive-mqtt/issues"
-  },
-  "homepage": "https://github.com/devicehive/devicehive-mqtt#readme",
-  "dependencies": {
-    "aedes": "^0.47.0",
-    "aedes-persistence-redis": "^9.0.1",
-    "aedes-stats": "^4.0.0",
-    "debug": "^4.3.4",
-    "json-evn-configurator": "^1.0.6",
-    "lru-cache": "^7.13.1",
-    "mqemitter-redis": "^5.0.0",
-    "pm2": "^5.2.0",
-    "pmx": "^1.6.7",
-    "randomstring": "^1.2.2",
-    "winston": "^3.8.1",
-    "ws": "^8.8.1"
-  },
-  "devDependencies": {
-    "chai": "^4.3.6",
-    "mocha": "^10.0.0",
-    "mqtt": "^4.3.7",
-    "sinon": "^14.0.0"
-  }
+    "name": "devicehive-mqtt",
+    "version": "2.0.0",
+    "description": "MQTT plugin for DeviceHive server",
+    "main": "src/broker.js",
+    "scripts": {
+        "test": "mocha test/unit/**/**.spec.js",
+        "unitTest": "mocha test/unit/**/**.spec.js",
+        "integrationTest": "mocha test/integration/**/**.spec.js",
+        "format:check": "prettier --check .",
+        "format:write": "prettier --write .",
+        "lint:check": "eslint .",
+        "lint:fix": "eslint --fix ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/devicehive/devicehive-mqtt.git"
+    },
+    "keywords": [
+        "DeviceHive",
+        "MQTT",
+        "API",
+        "IoT"
+    ],
+    "author": "Ihor Trambovetskyi (igortram@gmail.com)",
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/devicehive/devicehive-mqtt/issues"
+    },
+    "homepage": "https://github.com/devicehive/devicehive-mqtt#readme",
+    "dependencies": {
+        "aedes": "^0.47.0",
+        "aedes-persistence-redis": "^9.0.1",
+        "aedes-stats": "^4.0.0",
+        "debug": "^4.3.4",
+        "json-evn-configurator": "^1.0.6",
+        "lru-cache": "^7.13.1",
+        "mqemitter-redis": "^5.0.0",
+        "pm2": "^5.2.0",
+        "pmx": "^1.6.7",
+        "randomstring": "^1.2.2",
+        "winston": "^3.8.1",
+        "ws": "^8.8.1"
+    },
+    "devDependencies": {
+        "chai": "^4.3.6",
+        "eslint": "^8.20.0",
+        "eslint-config-google": "^0.14.0",
+        "eslint-config-prettier": "^8.5.0",
+        "mocha": "^10.0.0",
+        "mqtt": "^4.3.7",
+        "prettier": "^2.7.1",
+        "sinon": "^14.0.0"
+    }
 }

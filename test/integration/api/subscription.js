@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -25,7 +25,7 @@ it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -34,7 +34,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -42,61 +42,76 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${LIST_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${LIST_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${LIST_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${SUBSCRIPTION_COMMAND_TOPIC_1}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${SUBSCRIPTION_COMMAND_TOPIC_1}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${SUBSCRIPTION_COMMAND_TOPIC_1}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${SUBSCRIPTION_COMMAND_TOPIC_2}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${SUBSCRIPTION_COMMAND_TOPIC_2}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${SUBSCRIPTION_COMMAND_TOPIC_2}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${SUBSCRIPTION_NOTIFICATION_TOPIC_1}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${SUBSCRIPTION_NOTIFICATION_TOPIC_1}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${SUBSCRIPTION_NOTIFICATION_TOPIC_1}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${SUBSCRIPTION_NOTIFICATION_TOPIC_2}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${SUBSCRIPTION_NOTIFICATION_TOPIC_2}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${SUBSCRIPTION_NOTIFICATION_TOPIC_2}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -107,21 +122,28 @@ it(`should query the list of command subscriptions for the user login: "${Config
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.subscriptions).to.be.an(`array`);
-            expect(message.subscriptions.map((subscriptionObject) => {
-                return subscriptionObject.deviceId;
-            })).to.include.members([Config.DEVICE_ID]);
-            expect(message.subscriptions.map((subscriptionObject) => {
-                return subscriptionObject.names[0];
-            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
+            expect(
+                message.subscriptions.map((subscriptionObject) => {
+                    return subscriptionObject.deviceId;
+                })
+            ).to.include.members([Config.DEVICE_ID]);
+            expect(
+                message.subscriptions.map((subscriptionObject) => {
+                    return subscriptionObject.names[0];
+                })
+            ).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            type: SUBSCRIPTION_COMMAND_TYPE
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                type: SUBSCRIPTION_COMMAND_TYPE,
+            })
+        );
     });
 });
 
@@ -132,21 +154,28 @@ it(`should query the list of notification subscriptions for the user login: "${C
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.subscriptions).to.be.an(`array`);
-            expect(message.subscriptions.map((subscriptionObject) => {
-                return subscriptionObject.deviceId;
-            })).to.include.members([Config.DEVICE_ID]);
-            expect(message.subscriptions.map((subscriptionObject) => {
-                return subscriptionObject.names[0];
-            })).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
+            expect(
+                message.subscriptions.map((subscriptionObject) => {
+                    return subscriptionObject.deviceId;
+                })
+            ).to.include.members([Config.DEVICE_ID]);
+            expect(
+                message.subscriptions.map((subscriptionObject) => {
+                    return subscriptionObject.names[0];
+                })
+            ).to.include.members([`${TEST_NAME}1`, `${TEST_NAME}2`]);
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            type: SUBSCRIPTION_NOTIFICATION_TYPE
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                type: SUBSCRIPTION_NOTIFICATION_TYPE,
+            })
+        );
     });
 });
 

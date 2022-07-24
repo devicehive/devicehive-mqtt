@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -21,7 +21,7 @@ it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -30,7 +30,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -38,25 +38,31 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${AUTHENTICATE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${AUTHENTICATE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${AUTHENTICATE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${TOKEN_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${TOKEN_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${TOKEN_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -75,19 +81,25 @@ it(`should authenticate by access token received from server`, () => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message).to.include.all.keys(`accessToken`, `refreshToken`);
 
-            mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                action: AUTHENTICATE_ACTION,
-                requestId: requestId2,
-                token: message.accessToken
-            }));
+            mqttClient.publish(
+                CONST.DH_REQUEST_TOPIC,
+                JSON.stringify({
+                    action: AUTHENTICATE_ACTION,
+                    requestId: requestId2,
+                    token: message.accessToken,
+                })
+            );
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: TOKEN_ACTION,
-            requestId: requestId1,
-            login: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: TOKEN_ACTION,
+                requestId: requestId1,
+                login: Config.TEST_LOGIN,
+                password: Config.TEST_PASSWORD,
+            })
+        );
     });
 });
 

@@ -1,15 +1,14 @@
-const CONST = require('../util/constants.json');
-const probe = require('pmx').probe();
+const CONST = require("../util/constants.json");
+const probe = require("pmx").probe();
 
 /**
  * Class for monitoring broker process
  */
 class BrokerProcessMonitoring {
-
     /**
      * Create new BrokerProcessMonitoring
      */
-    constructor () {
+    constructor() {
         this.uptime = 0;
         this.time = "";
         this.clientsTotal = 0;
@@ -37,8 +36,8 @@ class BrokerProcessMonitoring {
 
     /**
      * Add PMX metric
-     * @param metricName
-     * @param description
+     * @param {string} metricName
+     * @param {string} description
      * @private
      */
     _addPmxProbeMetric(metricName, description) {
@@ -46,16 +45,16 @@ class BrokerProcessMonitoring {
             name: description,
             value: () => {
                 return this[metricName];
-            }
+            },
         });
     }
 
     /**
      * Update process metric
-     * @param metricName
-     * @param value
+     * @param {string} metricName
+     * @param {string|number} value
      */
-    updateMetric (metricName, value) {
+    updateMetric(metricName, value) {
         switch (metricName) {
             case CONST.MQTT.BROKER_STATS_TOPICS.UPTIME:
                 this.uptime = value;

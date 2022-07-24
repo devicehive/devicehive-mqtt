@@ -1,55 +1,51 @@
 const winston = require(`winston`);
 
-
 /**
  * Application logger facade class.
  */
 class ApplicationLogger {
-
     /**
      * Create new ApplicationLogger
+     * @param {string} loggingLevel
      */
-    constructor (loggingLevel) {
+    constructor(loggingLevel) {
         this.logger = winston.createLogger({
             level: loggingLevel,
-            transports: [
-                new winston.transports.Console()
-            ]
+            transports: [new winston.transports.Console()],
         });
     }
 
     /**
      * Error log
-     * @param str
+     * @param {string} str
      */
-    err (str) {
+    err(str) {
         this.logger.error(str);
     }
 
     /**
      * Warning log
-     * @param str
+     * @param {string} str
      */
-    warn (str) {
+    warn(str) {
         this.logger.warn(str);
     }
 
     /**
      * Information log
-     * @param str
+     * @param {string} str
      */
-    info (str) {
+    info(str) {
         this.logger.info(str);
     }
 
     /**
      * Debug log
-     * @param str
+     * @param {string} str
      */
-    debug (str) {
+    debug(str) {
         this.logger.debug(str);
     }
 }
-
 
 module.exports = ApplicationLogger;

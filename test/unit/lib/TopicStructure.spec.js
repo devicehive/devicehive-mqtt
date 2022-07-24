@@ -2,7 +2,6 @@ const TopicStructure = require(`../../../lib/TopicStructure.js`);
 const chai = require(`chai`);
 const expect = chai.expect;
 
-
 describe(TopicStructure.name, () => {
     const dhStr = `dh`;
     const notificationStr = `notification`;
@@ -15,16 +14,29 @@ describe(TopicStructure.name, () => {
     const deviceId = `VQjfBdTl0LvMVBt9RTJMOmwdqr6hWLjln1wZ`;
     const clientId = `clientId`;
     const name = `temperature`;
-    const listOfMethods = [`isDH`, `getDomain`, `hasOwner`, `getOwner`, `isSubscription`,
-        `isResponse`, `isRequest`, `getAction`, `getNetworkIds`, `getDeviceTypeIds`, `getDevice`, `getNames`,
-        `isNotification`, `isCommandInsert`, `isCommandUpdate`];
+    const listOfMethods = [
+        `isDH`,
+        `getDomain`,
+        `hasOwner`,
+        `getOwner`,
+        `isSubscription`,
+        `isResponse`,
+        `isRequest`,
+        `getAction`,
+        `getNetworkIds`,
+        `getDeviceTypeIds`,
+        `getDevice`,
+        `getNames`,
+        `isNotification`,
+        `isCommandInsert`,
+        `isCommandUpdate`,
+    ];
     const notDhTopic = `not/dh/topic`;
     const dhNotificationTopic = `${dhStr}/${notificationStr}/${networkId}/${deviceTypeId}/${deviceId}/${name}`;
     const dhCommandTopic = `${dhStr}/${commandStr}/${networkId}/${deviceTypeId}/${deviceId}/${name}`;
     const dhCommandUpdateTopic = `${dhStr}/${commandUpdateStr}/${networkId}/${deviceTypeId}/${deviceId}/${name}`;
     const dhRequestTopic = `${dhStr}/${requestStr}`;
     const dhNotificationResponseTopic = `${dhStr}/${responseStr}/${notificationStr}@${clientId}`;
-
 
     it(`should be a class`, () => {
         expect(TopicStructure).to.be.a(`Function`);
@@ -68,7 +80,7 @@ describe(TopicStructure.name, () => {
         });
 
         it(`should has notification name: ${name}`, () => {
-            expect(topicStructure.getNames()).to.deep.equal([ name ]);
+            expect(topicStructure.getNames()).to.deep.equal([name]);
         });
     });
 
@@ -92,7 +104,7 @@ describe(TopicStructure.name, () => {
         });
 
         it(`should has notification name: ${name}`, () => {
-            expect(topicStructure.getNames()).to.deep.equal([ name ]);
+            expect(topicStructure.getNames()).to.deep.equal([name]);
         });
     });
 
@@ -116,7 +128,7 @@ describe(TopicStructure.name, () => {
         });
 
         it(`should has notification name: ${name}`, () => {
-            expect(topicStructure.getNames()).to.deep.equal([ name ]);
+            expect(topicStructure.getNames()).to.deep.equal([name]);
         });
     });
 

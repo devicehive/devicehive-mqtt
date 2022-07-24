@@ -1,16 +1,14 @@
 const CONST = require(`./constants.json`);
 const Config = require(`../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const sinon = require(`sinon`);
 const chai = require(`chai`);
 const expect = chai.expect;
 const assert = chai.assert;
 
-
 describe(`MQTT broker (should be run on localhost:1883)`, () => {
-
     describe(`User API`, () => require(`./api/user.js`));
 
     describe(`Configuration API`, () => require(`./api/configuration.js`));
@@ -37,17 +35,21 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
     describe(`Connection without credentials. Postponed authentication`, () => {
         const ee = new EventEmitter();
-        let mqttClient, accessToken;
+        let mqttClient;
+        let accessToken;
 
         it(`should connect to MQTT broker without user credentials`, () => {
             return new Promise((resolve) => {
                 mqttClient = mqtt.connect(Config.MQTT_BROKER_URL);
 
                 mqttClient.on(`message`, (topic, message) => {
-                    ee.emit(topic.split(`/`)[2].split(`@`)[0], JSON.parse(message.toString()))
+                    ee.emit(
+                        topic.split(`/`)[2].split(`@`)[0],
+                        JSON.parse(message.toString())
+                    );
                 });
 
-                mqttClient.on('connect', () => {
+                mqttClient.on("connect", () => {
                     resolve();
                 });
             });
@@ -56,10 +58,11 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
         it(`should not be able to subscribe for DH topic (except token and authenticate)`, () => {
             return new Promise((resolve, reject) => {
                 mqttClient.subscribe(`dh/notification/#`, (err, granted) => {
-                    if (granted[0].qos === 128) { // TODO look into it. Maybe bug in the mosca
+                    if (granted[0].qos === 128) {
+                        // TODO look into it. Maybe bug in the mosca
                         resolve();
                     } else {
-                        reject()
+                        reject(err);
                     }
                 });
             });
@@ -67,25 +70,31 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
         it(`should be able to subscribe for DH token response topic`, () => {
             return new Promise((resolve, reject) => {
-                mqttClient.subscribe(`dh/response/token@${mqttClient.options.clientId}`, (err) => {
-                    if (err) {
-                        reject();
-                    } else {
-                        resolve();
+                mqttClient.subscribe(
+                    `dh/response/token@${mqttClient.options.clientId}`,
+                    (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
                     }
-                });
+                );
             });
         });
 
         it(`should be able to subscribe for DH authenticate response topic`, () => {
             return new Promise((resolve, reject) => {
-                mqttClient.subscribe(`dh/response/authenticate@${mqttClient.options.clientId}`, (err) => {
-                    if (err) {
-                        reject();
-                    } else {
-                        resolve();
+                mqttClient.subscribe(
+                    `dh/response/authenticate@${mqttClient.options.clientId}`,
+                    (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
                     }
-                });
+                );
             });
         });
 
@@ -96,7 +105,10 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 ee.once(`token`, (message) => {
                     if (message.requestId === requestId) {
                         expect(message.status).to.equal(CONST.SUCCESS_STATUS);
-                        expect(message).to.include.all.keys(`accessToken`, `refreshToken`);
+                        expect(message).to.include.all.keys(
+                            `accessToken`,
+                            `refreshToken`
+                        );
 
                         accessToken = message.accessToken;
 
@@ -104,12 +116,15 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     }
                 });
 
-                mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                    action: `token`,
-                    requestId: requestId,
-                    login: Config.TEST_LOGIN,
-                    password: Config.TEST_PASSWORD
-                }));
+                mqttClient.publish(
+                    CONST.DH_REQUEST_TOPIC,
+                    JSON.stringify({
+                        action: `token`,
+                        requestId: requestId,
+                        login: Config.TEST_LOGIN,
+                        password: Config.TEST_PASSWORD,
+                    })
+                );
             });
         });
 
@@ -125,11 +140,14 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                     }
                 });
 
-                mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                    action: `authenticate`,
-                    requestId: requestId,
-                    token: accessToken
-                }));
+                mqttClient.publish(
+                    CONST.DH_REQUEST_TOPIC,
+                    JSON.stringify({
+                        action: `authenticate`,
+                        requestId: requestId,
+                        token: accessToken,
+                    })
+                );
             });
         });
 
@@ -137,7 +155,7 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             return new Promise((resolve, reject) => {
                 mqttClient.subscribe(`dh/notification/#`, (err) => {
                     if (err) {
-                        reject();
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -155,14 +173,15 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
     });
 
     describe(`Basic functionality`, () => {
-        let mqttClientId, mqttClient;
+        let mqttClientId;
+        let mqttClient;
 
         beforeEach(() => {
             mqttClientId = randomString.generate();
             mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
                 clientId: mqttClientId,
                 username: Config.TEST_LOGIN,
-                password: Config.TEST_PASSWORD
+                password: Config.TEST_PASSWORD,
             });
         });
 
@@ -186,12 +205,15 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(responseTopic, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: `token`,
-                        requestId: requestId,
-                        login: Config.TEST_LOGIN,
-                        password: Config.TEST_PASSWORD
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: `token`,
+                            requestId: requestId,
+                            login: Config.TEST_LOGIN,
+                            password: Config.TEST_PASSWORD,
+                        })
+                    );
                 });
             });
 
@@ -201,7 +223,10 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 expect(topic).to.equal(responseTopic);
                 expect(messageObject.status).to.equal(CONST.SUCCESS_STATUS);
                 expect(messageObject.requestId).to.equal(requestId);
-                expect(messageObject).to.include.all.keys(`accessToken`, `refreshToken`);
+                expect(messageObject).to.include.all.keys(
+                    `accessToken`,
+                    `refreshToken`
+                );
 
                 done();
             });
@@ -218,19 +243,22 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: action,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        notification: {
-                            notification: randomNotificationName,
-                            timestamp: new Date(),
-                            parameters: {
-                                temperature: 999
-                            }
-                        }
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: action,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
+                            notification: {
+                                notification: randomNotificationName,
+                                timestamp: new Date(),
+                                parameters: {
+                                    temperature: 999,
+                                },
+                            },
+                        })
+                    );
                 });
             });
 
@@ -239,7 +267,9 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
                 expect(topic).to.equal(subscriptionTopic);
                 expect(messageObject.action).to.equal(action);
-                expect(messageObject.notification.notification).to.equal(randomNotificationName);
+                expect(messageObject.notification.notification).to.equal(
+                    randomNotificationName
+                );
 
                 done();
             });
@@ -256,20 +286,23 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: action,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        command: {
-                            command: randomCommandName,
-                            timestamp: new Date(),
-                            lifetime: 15,
-                            parameters: {
-                                value: 1
-                            }
-                        }
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: action,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
+                            command: {
+                                command: randomCommandName,
+                                timestamp: new Date(),
+                                lifetime: 15,
+                                parameters: {
+                                    value: 1,
+                                },
+                            },
+                        })
+                    );
                 });
             });
 
@@ -279,7 +312,9 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 if (topic === subscriptionTopic) {
                     expect(topic).to.equal(subscriptionTopic);
                     expect(messageObject.action).to.equal(action);
-                    expect(messageObject.command.command).to.equal(randomCommandName);
+                    expect(messageObject.command.command).to.equal(
+                        randomCommandName
+                    );
                 }
 
                 done();
@@ -302,20 +337,23 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic1);
                 mqttClient.subscribe(subscriptionTopic2, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: actionInsert,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        command: {
-                            command: randomCommandName,
-                            timestamp: new Date(),
-                            lifetime: 15,
-                            parameters: {
-                                value: startValue
-                            }
-                        }
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: actionInsert,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
+                            command: {
+                                command: randomCommandName,
+                                timestamp: new Date(),
+                                lifetime: 15,
+                                parameters: {
+                                    value: startValue,
+                                },
+                            },
+                        })
+                    );
                 });
             });
 
@@ -323,21 +361,26 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                 const messageObject = JSON.parse(message.toString());
 
                 if (topic === subscriptionTopic2) {
-                    expect(messageObject.command.parameters.value).to.equal(startValue);
+                    expect(messageObject.command.parameters.value).to.equal(
+                        startValue
+                    );
 
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: actionUpdate,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        commandId: messageObject.command.id,
-                        command: {
-                            command: randomCommandName,
-                            parameters: {
-                                value: newValue
-                            }
-                        }
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: actionUpdate,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
+                            commandId: messageObject.command.id,
+                            command: {
+                                command: randomCommandName,
+                                parameters: {
+                                    value: newValue,
+                                },
+                            },
+                        })
+                    );
                 } else if (topic === subscriptionTopic1) {
                     expect(messageObject.action).to.equal(actionUpdate);
 
@@ -360,45 +403,9 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
 
             mqttClient.on(`connect`, () => {
                 mqttClient.subscribe(subscriptionTopic1, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: actionNotification,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        notification: {
-                            notification: `light`,
-                            timestamp: new Date(),
-                            parameters: {
-                                status: `on`
-                            }
-                        }
-                    }));
-                });
-
-                mqttClient.subscribe(subscriptionTopic2, () => {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: actionCommand,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        command: {
-                            command: 'switchOff',
-                            timestamp: new Date(),
-                            lifetime: 60,
-                            parameters: {
-                                value: 'off'
-                            }
-                        }
-                    }));
-                });
-            });
-
-            mqttClient.on(`message`, (topic, message) => {
-                if (topic === subscriptionTopic1) {
-                    subscription1Spy();
-
-                    mqttClient.unsubscribe(subscriptionTopic1, () => {
-                        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
                             action: actionNotification,
                             deviceId: Config.DEVICE_ID,
                             networkId: Config.NETWORK_ID,
@@ -407,29 +414,77 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
                                 notification: `light`,
                                 timestamp: new Date(),
                                 parameters: {
-                                    status: `off`
-                                }
-                            }
-                        }));
-                    });
-                } else if (topic === subscriptionTopic2) {
-                    subscription2Spy();
+                                    status: `on`,
+                                },
+                            },
+                        })
+                    );
+                });
 
-                    mqttClient.unsubscribe(subscriptionTopic2, () => {
-                        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
+                mqttClient.subscribe(subscriptionTopic2, () => {
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
                             action: actionCommand,
                             deviceId: Config.DEVICE_ID,
                             networkId: Config.NETWORK_ID,
                             deviceTypeId: Config.DEVICE_TYPE_ID,
                             command: {
-                                command: 'switchOn',
+                                command: "switchOff",
                                 timestamp: new Date(),
                                 lifetime: 60,
                                 parameters: {
-                                    value: 'on'
-                                }
-                            }
-                        }));
+                                    value: "off",
+                                },
+                            },
+                        })
+                    );
+                });
+            });
+
+            mqttClient.on(`message`, (topic) => {
+                if (topic === subscriptionTopic1) {
+                    subscription1Spy();
+
+                    mqttClient.unsubscribe(subscriptionTopic1, () => {
+                        mqttClient.publish(
+                            CONST.DH_REQUEST_TOPIC,
+                            JSON.stringify({
+                                action: actionNotification,
+                                deviceId: Config.DEVICE_ID,
+                                networkId: Config.NETWORK_ID,
+                                deviceTypeId: Config.DEVICE_TYPE_ID,
+                                notification: {
+                                    notification: `light`,
+                                    timestamp: new Date(),
+                                    parameters: {
+                                        status: `off`,
+                                    },
+                                },
+                            })
+                        );
+                    });
+                } else if (topic === subscriptionTopic2) {
+                    subscription2Spy();
+
+                    mqttClient.unsubscribe(subscriptionTopic2, () => {
+                        mqttClient.publish(
+                            CONST.DH_REQUEST_TOPIC,
+                            JSON.stringify({
+                                action: actionCommand,
+                                deviceId: Config.DEVICE_ID,
+                                networkId: Config.NETWORK_ID,
+                                deviceTypeId: Config.DEVICE_TYPE_ID,
+                                command: {
+                                    command: "switchOn",
+                                    timestamp: new Date(),
+                                    lifetime: 60,
+                                    parameters: {
+                                        value: "on",
+                                    },
+                                },
+                            })
+                        );
                     });
                 }
             });
@@ -451,26 +506,35 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
         it(`should send notification of same subscription for each subscriber only once`, (done) => {
             const SUBSCRIPTION_TOPIC = `dh/notification/${Config.NETWORK_ID}/${Config.DEVICE_TYPE_ID}/${Config.DEVICE_ID}/sharedNotification`;
             const ACTION_NOTIFICATION = `notification/insert`;
-            const mqttClient2 = mqtt.connect(Config.MQTT_BROKER_URL, { username: Config.TEST_LOGIN, password: Config.TEST_PASSWORD });
-            const mqttClient3 = mqtt.connect(Config.MQTT_BROKER_URL, { username: Config.TEST_LOGIN, password: Config.TEST_PASSWORD });
+            const mqttClient2 = mqtt.connect(Config.MQTT_BROKER_URL, {
+                username: Config.TEST_LOGIN,
+                password: Config.TEST_PASSWORD,
+            });
+            const mqttClient3 = mqtt.connect(Config.MQTT_BROKER_URL, {
+                username: Config.TEST_LOGIN,
+                password: Config.TEST_PASSWORD,
+            });
             let subscriptionCounter = 0;
             const sharedPublisher = () => {
                 subscriptionCounter++;
 
                 if (subscriptionCounter > 2) {
-                    mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                        action: ACTION_NOTIFICATION,
-                        deviceId: Config.DEVICE_ID,
-                        networkId: Config.NETWORK_ID,
-                        deviceTypeId: Config.DEVICE_TYPE_ID,
-                        notification: {
-                            notification: `sharedNotification`,
-                            timestamp: new Date(),
-                            parameters: {
-                                status: `share`
-                            }
-                        }
-                    }));
+                    mqttClient.publish(
+                        CONST.DH_REQUEST_TOPIC,
+                        JSON.stringify({
+                            action: ACTION_NOTIFICATION,
+                            deviceId: Config.DEVICE_ID,
+                            networkId: Config.NETWORK_ID,
+                            deviceTypeId: Config.DEVICE_TYPE_ID,
+                            notification: {
+                                notification: `sharedNotification`,
+                                timestamp: new Date(),
+                                parameters: {
+                                    status: `share`,
+                                },
+                            },
+                        })
+                    );
                 }
             };
 
@@ -479,33 +543,41 @@ describe(`MQTT broker (should be run on localhost:1883)`, () => {
             const mqttClient3Spy = sinon.spy();
 
             mqttClient.on(`connect`, () => {
-                mqttClient.subscribe(SUBSCRIPTION_TOPIC, () => sharedPublisher());
+                mqttClient.subscribe(SUBSCRIPTION_TOPIC, () =>
+                    sharedPublisher()
+                );
             });
 
             mqttClient2.on(`connect`, () => {
-                mqttClient2.subscribe(SUBSCRIPTION_TOPIC, () => sharedPublisher());
+                mqttClient2.subscribe(SUBSCRIPTION_TOPIC, () =>
+                    sharedPublisher()
+                );
             });
 
             mqttClient3.on(`connect`, () => {
-                mqttClient3.subscribe(SUBSCRIPTION_TOPIC, () => sharedPublisher());
+                mqttClient3.subscribe(SUBSCRIPTION_TOPIC, () =>
+                    sharedPublisher()
+                );
             });
 
-            mqttClient.on(`message`, (topic, message) => {
+            mqttClient.on(`message`, (topic) => {
                 if (topic === SUBSCRIPTION_TOPIC) {
                     mqttClient1Spy();
                 }
             });
 
-            mqttClient2.on(`message`, (topic, message) => {
+            mqttClient2.on(`message`, (topic) => {
                 if (topic === SUBSCRIPTION_TOPIC) {
                     mqttClient2Spy();
                 }
             });
 
-            mqttClient3.on(`message`, (topic, message) => {
+            mqttClient3.on(`message`, (topic) => {
                 if (topic === SUBSCRIPTION_TOPIC) {
                     mqttClient3Spy();
-                    mqttClient3.unsubscribe(SUBSCRIPTION_TOPIC, () => sharedPublisher());
+                    mqttClient3.unsubscribe(SUBSCRIPTION_TOPIC, () =>
+                        sharedPublisher()
+                    );
                 }
             });
 
