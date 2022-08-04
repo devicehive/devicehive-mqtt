@@ -205,7 +205,7 @@ it(`should query the list of networks with existing network name: "${TEST_NETWOR
             JSON.stringify({
                 action: LIST_ACTION,
                 requestId: requestId,
-                take: -1,
+                take: 10,
             })
         );
     });

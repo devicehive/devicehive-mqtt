@@ -264,7 +264,7 @@ it(`should query the list of users with existing user with login: "${TEST_USER_L
             JSON.stringify({
                 action: LIST_ACTION,
                 requestId: requestId,
-                take: -1,
+                take: 10,
             })
         );
     });
@@ -474,7 +474,7 @@ it(`should query the list of users without user with login: "${TEST_USER_LOGIN}"
             JSON.stringify({
                 action: LIST_ACTION,
                 requestId: requestId,
-                take: -1,
+                take: 10,
             })
         );
     });
