@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -31,13 +31,14 @@ const TEST_DEVICE_TYPE_NAME = randomString.generate();
 const TEST_DEVICE_TYPE_DESCRIPTION = randomString.generate();
 const TEST_DEVICE_TYPE_NEW_DESCRIPTION = randomString.generate();
 let deviceTypeCount = 0;
-let mqttClient, customDeviceTypeId;
+let mqttClient;
+let customDeviceTypeId;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -46,7 +47,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -54,49 +55,67 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${LIST_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${LIST_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${LIST_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
 it(`should subscribe for "${COUNT_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${COUNT_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${COUNT_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
 it(`should subscribe for "${GET_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${GET_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${GET_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
 it(`should subscribe for "${INSERT_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${INSERT_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${INSERT_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
 it(`should subscribe for "${UPDATE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${UPDATE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${UPDATE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
 it(`should subscribe for "${DELETE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        return mqttClient.subscribe(`${DELETE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            return err ? reject() : resolve();
-        })
+        return mqttClient.subscribe(
+            `${DELETE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                return err ? reject(err) : resolve();
+            }
+        );
     });
 });
 
@@ -111,10 +130,13 @@ it(`should get count of existing device types`, () => {
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: COUNT_ACTION,
-            requestId: requestId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: COUNT_ACTION,
+                requestId: requestId,
+            })
+        );
     });
 });
 
@@ -129,14 +151,17 @@ it(`should create new device type with name: "${TEST_DEVICE_TYPE_NAME}" and desc
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: INSERT_ACTION,
-            requestId: requestId,
-            deviceType: {
-                name: TEST_DEVICE_TYPE_NAME,
-                description: TEST_DEVICE_TYPE_DESCRIPTION
-            }
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: INSERT_ACTION,
+                requestId: requestId,
+                deviceType: {
+                    name: TEST_DEVICE_TYPE_NAME,
+                    description: TEST_DEVICE_TYPE_DESCRIPTION,
+                },
+            })
+        );
     });
 });
 
@@ -152,10 +177,13 @@ it(`should get new count of existing device types increased by 1`, () => {
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: COUNT_ACTION,
-            requestId: requestId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: COUNT_ACTION,
+                requestId: requestId,
+            })
+        );
     });
 });
 
@@ -168,15 +196,20 @@ it(`should query the device type with name: "${TEST_DEVICE_TYPE_NAME}" and descr
             expect(message.deviceTypes).to.be.an(`array`);
             expect(message.deviceTypes[0].id).to.equal(customDeviceTypeId);
             expect(message.deviceTypes[0].name).to.equal(TEST_DEVICE_TYPE_NAME);
-            expect(message.deviceTypes[0].description).to.equal(TEST_DEVICE_TYPE_DESCRIPTION);
+            expect(message.deviceTypes[0].description).to.equal(
+                TEST_DEVICE_TYPE_DESCRIPTION
+            );
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            name: TEST_DEVICE_TYPE_NAME
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                name: TEST_DEVICE_TYPE_NAME,
+            })
+        );
     });
 });
 
@@ -188,11 +221,14 @@ it(`should update device type with name: "${TEST_DEVICE_TYPE_NAME}" to new descr
         ee.once(requestId1, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
 
-            mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-                action: GET_ACTION,
-                requestId: requestId2,
-                deviceTypeId: customDeviceTypeId
-            }));
+            mqttClient.publish(
+                CONST.DH_REQUEST_TOPIC,
+                JSON.stringify({
+                    action: GET_ACTION,
+                    requestId: requestId2,
+                    deviceTypeId: customDeviceTypeId,
+                })
+            );
         });
 
         ee.once(requestId2, (message) => {
@@ -200,19 +236,24 @@ it(`should update device type with name: "${TEST_DEVICE_TYPE_NAME}" to new descr
             expect(message.deviceType).to.be.an(`object`);
             expect(message.deviceType.id).to.equal(customDeviceTypeId);
             expect(message.deviceType.name).to.equal(TEST_DEVICE_TYPE_NAME);
-            expect(message.deviceType.description).to.equal(TEST_DEVICE_TYPE_NEW_DESCRIPTION);
+            expect(message.deviceType.description).to.equal(
+                TEST_DEVICE_TYPE_NEW_DESCRIPTION
+            );
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: UPDATE_ACTION,
-            requestId: requestId1,
-            deviceTypeId: customDeviceTypeId,
-            deviceType: {
-                name: TEST_DEVICE_TYPE_NAME,
-                description: TEST_DEVICE_TYPE_NEW_DESCRIPTION
-            }
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: UPDATE_ACTION,
+                requestId: requestId1,
+                deviceTypeId: customDeviceTypeId,
+                deviceType: {
+                    name: TEST_DEVICE_TYPE_NAME,
+                    description: TEST_DEVICE_TYPE_NEW_DESCRIPTION,
+                },
+            })
+        );
     });
 });
 
@@ -225,11 +266,14 @@ it(`should delete the device type with name: "${TEST_DEVICE_TYPE_NAME}" and desc
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            deviceTypeId: customDeviceTypeId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                deviceTypeId: customDeviceTypeId,
+            })
+        );
     });
 });
 

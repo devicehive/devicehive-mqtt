@@ -1,90 +1,93 @@
-const CONST = require('../util/constants.json');
-const probe = require('pmx').probe();
+const CONST = require("../util/constants.json");
+const probe = require("pmx").probe();
 
 /**
  * Class for monitoring broker process
  */
 class BrokerProcessMonitoring {
-
     /**
      * Create new BrokerProcessMonitoring
      */
-    constructor () {
-        const me = this;
+    constructor() {
+        this.uptime = 0;
+        this.time = "";
+        this.clientsTotal = 0;
+        this.clientsMaximum = 0;
+        this.publishedCount = 0;
+        this.heapCurrent = 0;
+        this.heapMaximum = 0;
+        this.cpuUsage = 0;
+        this.cpuAvg1 = 0;
+        this.cpuAvg5 = 0;
+        this.cpuAvg15 = 0;
 
-        me.uptime = 0;
-        me.connectedClients = 0;
-        me.maximumClients = 0;
-        me.connectionLoad = 0;
-        me.publishingLoad = 0;
-        me.heapCurrent = 0;
-        me.heapMaximum = 0;
-        me.publishedCount = 0;
-        me.startAt = 0;
-
-        me._addPmxProbeMetric(`uptime`, `Uptime`);
-        me._addPmxProbeMetric(`connectedClients`, `Connected clients`);
-        me._addPmxProbeMetric(`connectionLoad`, `Connection load (5 min)`);
-        me._addPmxProbeMetric(`maximumClients`, `Maximum clients`);
-        me._addPmxProbeMetric(`publishingLoad`, `Publishing load`);
-        me._addPmxProbeMetric(`heapCurrent`, `Current heap`);
-        me._addPmxProbeMetric(`heapMaximum`, `Maximum heap`);
-        me._addPmxProbeMetric(`publishedCount`, `Publishing count (5 min)`);
-        me._addPmxProbeMetric(`startAt`, `Start at`);
+        this._addPmxProbeMetric(`uptime`, `Uptime`);
+        this._addPmxProbeMetric(`time`, `Broker time`);
+        this._addPmxProbeMetric(`clientsTotal`, `Total connections`);
+        this._addPmxProbeMetric(`clientsMaximum`, `Maximum connections`);
+        this._addPmxProbeMetric(`publishedCount`, `Publishing count`);
+        this._addPmxProbeMetric(`heapCurrent`, `Current heap`);
+        this._addPmxProbeMetric(`heapMaximum`, `Maximum heap`);
+        this._addPmxProbeMetric(`cpuUsage`, `Current CPU usage`);
+        this._addPmxProbeMetric(`cpuAvg1`, `Average CPU usage (1min)`);
+        this._addPmxProbeMetric(`cpuAvg5`, `Average CPU usage (5min)`);
+        this._addPmxProbeMetric(`cpuAvg15`, `Average CPU usage (15min)`);
     }
 
     /**
      * Add PMX metric
-     * @param metricName
-     * @param description
+     * @param {string} metricName
+     * @param {string} description
      * @private
      */
     _addPmxProbeMetric(metricName, description) {
-        const me = this;
-
-        me[`${metricName}Metric`] = probe.metric({
+        this[`${metricName}Metric`] = probe.metric({
             name: description,
-            value: function () {
-                return me[metricName];
-            }
+            value: () => {
+                return this[metricName];
+            },
         });
     }
 
     /**
      * Update process metric
-     * @param metricName
-     * @param value
+     * @param {string} metricName
+     * @param {string|number} value
      */
-    updateMetric (metricName, value) {
-        const me = this;
-
+    updateMetric(metricName, value) {
         switch (metricName) {
             case CONST.MQTT.BROKER_STATS_TOPICS.UPTIME:
-                me.uptime = value;
+                this.uptime = value;
                 break;
-            case CONST.MQTT.BROKER_STATS_TOPICS.CLIENTS_CONNECTED:
-                me.connectedClients = value;
+            case CONST.MQTT.BROKER_STATS_TOPICS.TIME:
+                this.time = value;
+                break;
+            case CONST.MQTT.BROKER_STATS_TOPICS.CLIENTS_TOTAL:
+                this.clientsTotal = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.CLIENTS_MAXIMUM:
-                me.maximumClients = value;
+                this.clientsMaximum = value;
                 break;
-            case CONST.MQTT.BROKER_STATS_TOPICS.LOAD_CONNECTIONS:
-                me.connectionLoad = value;
-                break;
-            case CONST.MQTT.BROKER_STATS_TOPICS.LOAD_PUBLISH_RECEIVED:
-                me.publishingLoad = value;
+            case CONST.MQTT.BROKER_STATS_TOPICS.PUBLISH_SENT:
+                this.publishedCount = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.MEMORY_HEAP_CURRENT:
-                me.heapCurrent = value;
+                this.heapCurrent = value;
                 break;
             case CONST.MQTT.BROKER_STATS_TOPICS.MEMORY_HEAP_MAXIMUM:
-                me.heapMaximum = value;
+                this.heapMaximum = value;
                 break;
-            case CONST.MQTT.BROKER_STATS_TOPICS.PUBLISH_RECEIVED:
-                me.publishedCount = value;
+            case CONST.MQTT.BROKER_STATS_TOPICS.CPU_USAGE:
+                this.cpuUsage = value;
                 break;
-            case CONST.MQTT.BROKER_STATS_TOPICS.START_AT:
-                me.startAt = value;
+            case CONST.MQTT.BROKER_STATS_TOPICS.CPU_AVG_1:
+                this.cpuAvg1 = value;
+                break;
+            case CONST.MQTT.BROKER_STATS_TOPICS.CPU_AVG_5:
+                this.cpuAvg5 = value;
+                break;
+            case CONST.MQTT.BROKER_STATS_TOPICS.CPU_AVG_15:
+                this.cpuAvg15 = value;
                 break;
         }
     }

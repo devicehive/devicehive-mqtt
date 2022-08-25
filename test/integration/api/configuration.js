@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -27,7 +27,7 @@ it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -36,7 +36,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -44,37 +44,46 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${GET_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${GET_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${GET_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${PUT_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${PUT_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${PUT_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${DELETE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${DELETE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${DELETE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -85,18 +94,25 @@ it(`should put new configuration with name: "${TEST_CONFIGURATION_NAME}" and val
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.configuration).to.be.an(`object`);
-            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-            expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
+            expect(message.configuration.name).to.equal(
+                TEST_CONFIGURATION_NAME
+            );
+            expect(message.configuration.value).to.equal(
+                START_TEST_CONFIGURATION_VALUE
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: PUT_ACTION,
-            requestId: requestId,
-            name: TEST_CONFIGURATION_NAME,
-            value: START_TEST_CONFIGURATION_VALUE
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: PUT_ACTION,
+                requestId: requestId,
+                name: TEST_CONFIGURATION_NAME,
+                value: START_TEST_CONFIGURATION_VALUE,
+            })
+        );
     });
 });
 
@@ -107,17 +123,24 @@ it(`should query configuration with name: "${TEST_CONFIGURATION_NAME}"`, () => {
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.configuration).to.be.an(`object`);
-            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-            expect(message.configuration.value).to.equal(START_TEST_CONFIGURATION_VALUE);
+            expect(message.configuration.name).to.equal(
+                TEST_CONFIGURATION_NAME
+            );
+            expect(message.configuration.value).to.equal(
+                START_TEST_CONFIGURATION_VALUE
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            name: TEST_CONFIGURATION_NAME
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                name: TEST_CONFIGURATION_NAME,
+            })
+        );
     });
 });
 
@@ -128,18 +151,25 @@ it(`should update configuration with name: "${TEST_CONFIGURATION_NAME}" by new v
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.configuration).to.be.an(`object`);
-            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-            expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
+            expect(message.configuration.name).to.equal(
+                TEST_CONFIGURATION_NAME
+            );
+            expect(message.configuration.value).to.equal(
+                UPDATED_TEST_CONFIGURATION_VALUE
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: PUT_ACTION,
-            requestId: requestId,
-            name: TEST_CONFIGURATION_NAME,
-            value: UPDATED_TEST_CONFIGURATION_VALUE
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: PUT_ACTION,
+                requestId: requestId,
+                name: TEST_CONFIGURATION_NAME,
+                value: UPDATED_TEST_CONFIGURATION_VALUE,
+            })
+        );
     });
 });
 
@@ -150,17 +180,24 @@ it(`should query updated configuration with name: "${TEST_CONFIGURATION_NAME}" a
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.configuration).to.be.an(`object`);
-            expect(message.configuration.name).to.equal(TEST_CONFIGURATION_NAME);
-            expect(message.configuration.value).to.equal(UPDATED_TEST_CONFIGURATION_VALUE);
+            expect(message.configuration.name).to.equal(
+                TEST_CONFIGURATION_NAME
+            );
+            expect(message.configuration.value).to.equal(
+                UPDATED_TEST_CONFIGURATION_VALUE
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            name: TEST_CONFIGURATION_NAME
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                name: TEST_CONFIGURATION_NAME,
+            })
+        );
     });
 });
 
@@ -174,11 +211,14 @@ it(`should delete configuration with name: "${TEST_CONFIGURATION_NAME}"`, () => 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: DELETE_ACTION,
-            requestId: requestId,
-            name: TEST_CONFIGURATION_NAME
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: DELETE_ACTION,
+                requestId: requestId,
+                name: TEST_CONFIGURATION_NAME,
+            })
+        );
     });
 });
 
@@ -192,10 +232,13 @@ it(`should check that configuration with name: "${TEST_CONFIGURATION_NAME}" has 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+            })
+        );
     });
 });
 

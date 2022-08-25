@@ -1,9 +1,9 @@
 {
     "BROKER_PORT": 1883,
-    "BROKER_WS_PORT": 3000,
-    "WS_SERVER_URL": "ws://localhost:8080/dh/websocket",
+    "WS_SERVER_URL": "ws://localhost:8080/api/websocket",
     "REDIS_SERVER_HOST": "localhost",
     "REDIS_SERVER_PORT": "6379",
     "APP_LOG_LEVEL": "info",
+    "STATS_INTERVAL_MS": 5000,
     "ENABLE_PM": true
 }

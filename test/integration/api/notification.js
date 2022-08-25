@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -20,13 +20,14 @@ const LIST_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${LIST_ACTION}`;
 const INSERT_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${INSERT_ACTION}`;
 const TEST_NOTIFICATION_NAME = randomString.generate();
 const TEST_NOTIFICATION_PARAMETERS = { parameter: `startParameter` };
-let mqttClient, testNotificationId;
+let mqttClient;
+let testNotificationId;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -35,7 +36,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -43,37 +44,46 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${GET_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${GET_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${GET_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${LIST_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${LIST_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${LIST_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${INSERT_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${INSERT_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${INSERT_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -90,15 +100,18 @@ it(`should create new notification with name: "${TEST_NOTIFICATION_NAME}" for de
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: INSERT_ACTION,
-            requestId: requestId,
-            deviceId: Config.DEVICE_ID,
-            notification: {
-                notification: TEST_NOTIFICATION_NAME,
-                parameters: TEST_NOTIFICATION_PARAMETERS
-            }
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: INSERT_ACTION,
+                requestId: requestId,
+                deviceId: Config.DEVICE_ID,
+                notification: {
+                    notification: TEST_NOTIFICATION_NAME,
+                    parameters: TEST_NOTIFICATION_PARAMETERS,
+                },
+            })
+        );
     });
 });
 
@@ -110,19 +123,26 @@ it(`should query the notification with name: "${TEST_NOTIFICATION_NAME}"`, () =>
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.notification).to.be.an(`object`);
             expect(message.notification.id).to.equal(testNotificationId);
-            expect(message.notification.notification).to.equal(TEST_NOTIFICATION_NAME);
+            expect(message.notification.notification).to.equal(
+                TEST_NOTIFICATION_NAME
+            );
             expect(message.notification.deviceId).to.equal(Config.DEVICE_ID);
-            expect(message.notification.parameters).to.deep.equal(TEST_NOTIFICATION_PARAMETERS);
+            expect(message.notification.parameters).to.deep.equal(
+                TEST_NOTIFICATION_PARAMETERS
+            );
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: GET_ACTION,
-            requestId: requestId,
-            deviceId: Config.DEVICE_ID,
-            notificationId: testNotificationId
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: GET_ACTION,
+                requestId: requestId,
+                deviceId: Config.DEVICE_ID,
+                notificationId: testNotificationId,
+            })
+        );
     });
 });
 
@@ -133,20 +153,29 @@ it(`should query the list of notifications for device with id: "${Config.DEVICE_
         ee.once(requestId, (message) => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message.notifications).to.be.an(`array`);
-            expect(message.notifications.map((notificationObject) => notificationObject.id))
-                .to.include.members([testNotificationId]);
-            expect(message.notifications.map((notificationObject) => notificationObject.notification))
-                .to.include.members([TEST_NOTIFICATION_NAME]);
+            expect(
+                message.notifications.map(
+                    (notificationObject) => notificationObject.id
+                )
+            ).to.include.members([testNotificationId]);
+            expect(
+                message.notifications.map(
+                    (notificationObject) => notificationObject.notification
+                )
+            ).to.include.members([TEST_NOTIFICATION_NAME]);
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: LIST_ACTION,
-            requestId: requestId,
-            deviceId: Config.DEVICE_ID,
-            take: 1000
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: LIST_ACTION,
+                requestId: requestId,
+                deviceId: Config.DEVICE_ID,
+                take: 1000,
+            })
+        );
     });
 });
 

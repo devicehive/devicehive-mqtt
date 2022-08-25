@@ -6,13 +6,12 @@ const expect = chai.expect;
 
 describe(WebSocketFactory.name, () => {
     const listOfMethods = [`getSocket`, `removeSocket`, `hasSocket`];
-    const testMessage = 'testMessage';
+    const testMessage = "testMessage";
     const WS_SERVER_PORT = 9090;
     const WS_SERVER_URL = `ws://127.0.0.1:${WS_SERVER_PORT}`;
     const client1 = `client1`;
     const client2 = `client2`;
     const client3 = `client3`;
-
 
     it(`should be a class`, () => {
         expect(WebSocketFactory).to.be.a(`Function`);
@@ -42,7 +41,15 @@ describe(WebSocketFactory.name, () => {
         it(`should fire event: "message"`, (done) => {
             const wsFactory = new WebSocketFactory(WS_SERVER_URL);
             const checkExpectation = () => {
-                if (wsClient1Spy.calledOnce && wsClient2Spy.calledOnce && wsClient3Spy.calledOnce) {
+                if (
+                    wsClient1Spy.calledOnce &&
+                    wsClient2Spy.calledOnce &&
+                    wsClient3Spy.calledOnce
+                ) {
+                    wsFactory.removeSocket(client1);
+                    wsFactory.removeSocket(client2);
+                    wsFactory.removeSocket(client3);
+
                     done();
                 }
             };
@@ -71,4 +78,3 @@ describe(WebSocketFactory.name, () => {
         });
     });
 });
-

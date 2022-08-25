@@ -4,26 +4,18 @@ const sinon = require(`sinon`);
 const chai = require(`chai`);
 const expect = chai.expect;
 
-
 describe(WebSocket.name, () => {
-    const listOfMethods = [`close`, `addEventListener`, `removeEventListener`, `sendString`];
-    const testMessage = 'testMessage';
+    const testMessage = "testMessage";
     const WS_SERVER_PORT = 9090;
     const WS_SERVER_URL = `ws://127.0.0.1:${WS_SERVER_PORT}`;
-
 
     it(`should be a class`, () => {
         expect(WebSocket).to.be.a(`Function`);
     });
 
-    it(`should has next methods: ${listOfMethods.join(`, `)}`, () => {
-        listOfMethods.forEach((methodName) => {
-            expect(new WebSocket(WS_SERVER_URL)[methodName]).to.be.a(`Function`);
-        });
-    });
-
     describe(`Events`, () => {
-        let wsServer, wsClient;
+        let wsServer;
+        let wsClient;
 
         beforeEach(() => {
             wsServer = new WebSocketServer({ port: WS_SERVER_PORT });
@@ -31,12 +23,17 @@ describe(WebSocket.name, () => {
         });
 
         afterEach(() => {
+            wsClient.close();
             wsServer.close();
         });
 
-        it('should fire events', (done) => {
+        it("should fire events", (done) => {
             const checkExpectation = () => {
-                if (openSpy.calledOnce && messageSpy.calledOnce && closeSpy.calledOnce) {
+                if (
+                    openSpy.calledOnce &&
+                    messageSpy.calledOnce &&
+                    closeSpy.calledOnce
+                ) {
                     done();
                 }
             };
@@ -45,28 +42,29 @@ describe(WebSocket.name, () => {
             const messageSpy = sinon.spy(checkExpectation);
             const closeSpy = sinon.spy(checkExpectation);
 
-            wsServer.on('connection', (ws) => {
+            wsServer.on("connection", (ws) => {
                 ws.on(`message`, (message) => {
                     ws.send(message);
-                })
+                });
             });
 
-            wsClient.on('open', () => {
+            wsClient.on("open", () => {
                 openSpy();
                 wsClient.sendString(testMessage);
             });
 
-            wsClient.on('message', () => {
+            wsClient.on("message", () => {
                 messageSpy();
                 wsClient.close();
             });
 
-            wsClient.on('close', () => closeSpy());
+            wsClient.on("close", () => closeSpy());
         });
     });
 
     describe(`Interaction with web socket server`, () => {
-        let wsServer, wsClient;
+        let wsServer;
+        let wsClient;
 
         beforeEach(() => {
             wsServer = new WebSocketServer({ port: WS_SERVER_PORT });
@@ -87,21 +85,21 @@ describe(WebSocket.name, () => {
         it(`should send test string to web socket server`, (done) => {
             wsClient.on(`open`, () => wsClient.sendString(testMessage));
 
-            wsServer.on('connection', (ws) => {
+            wsServer.on("connection", (ws) => {
                 ws.on(`message`, (message) => {
-                    expect(message).to.equal(testMessage);
+                    expect(message.toString()).to.equal(testMessage);
                     done();
-                })
+                });
             });
         });
 
         it(`should close the connection`, (done) => {
             wsClient.on(`open`, () => wsClient.close());
 
-            wsServer.on('connection', (ws) => {
+            wsServer.on("connection", (ws) => {
                 ws.on(`close`, () => {
                     done();
-                })
+                });
             });
         });
     });

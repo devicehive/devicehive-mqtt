@@ -1,0 +1,15 @@
+{
+    "root": true,
+    "env": {
+        "commonjs": true,
+        "es2021": true,
+        "mocha": true
+    },
+    "extends": ["google", "prettier"],
+    "parserOptions": {
+        "ecmaVersion": "latest"
+    },
+    "rules": {
+        "no-console": "error"
+    }
+}

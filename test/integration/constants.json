@@ -1,6 +1,6 @@
 {
-  "DH_RESPONSE_TOPIC": "dh/response",
-  "DH_REQUEST_TOPIC": "dh/request",
-  "SUCCESS_STATUS": "success",
-  "ERROR_STATUS": "error"
+    "DH_RESPONSE_TOPIC": "dh/response",
+    "DH_REQUEST_TOPIC": "dh/request",
+    "SUCCESS_STATUS": "success",
+    "ERROR_STATUS": "error"
 }

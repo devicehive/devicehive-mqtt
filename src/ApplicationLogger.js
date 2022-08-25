@@ -1,91 +1,51 @@
 const winston = require(`winston`);
-const config = winston.config;
-
 
 /**
  * Application logger facade class.
  */
 class ApplicationLogger {
-
     /**
      * Create new ApplicationLogger
+     * @param {string} loggingLevel
      */
-    constructor (loggingLevel) {
-        const me = this;
-        const loggerConfig = {
-            levels: {
-                debug: 3,
-                info: 2,
-                warn: 1,
-                error: 0
-            },
-            colors: {
-                debug: `yellow`,
-                info: `green`,
-                warn: `red`,
-                error: `red`
-            },
-            transports: [
-                new (winston.transports.Console)({
-                    colorize: true,
-                    level: loggingLevel,
-                    timestamp: () => (new Date()).toISOString(),
-                    formatter: (options) => {
-                        const pid = process.pid;
-                        const level = config.colorize(options.level, options.level.toUpperCase());
-                        const message = options.message;
-                        const timeStamp = config.colorize(options.level, options.timestamp());
-
-                        return `BROKER(${pid}) ${level}: ${message} --- ${timeStamp}`;
-                    }
-                })
-            ],
-            filters: [(level, msg) => msg.replace(/(\r\n|\n|\r)/gm, ``)]
-        };
-
-        me.logger = new (winston.Logger)(loggerConfig);
+    constructor(loggingLevel) {
+        this.logger = winston.createLogger({
+            level: loggingLevel,
+            transports: [new winston.transports.Console()],
+        });
     }
 
     /**
      * Error log
-     * @param str
+     * @param {string} str
      */
-    err (str) {
-        const me = this;
-
-        me.logger.error(str);
+    err(str) {
+        this.logger.error(str);
     }
 
     /**
      * Warning log
-     * @param str
+     * @param {string} str
      */
-    warn (str) {
-        const me = this;
-
-        me.logger.warn(str);
+    warn(str) {
+        this.logger.warn(str);
     }
 
     /**
      * Information log
-     * @param str
+     * @param {string} str
      */
-    info (str) {
-        const me = this;
-
-        me.logger.info(str);
+    info(str) {
+        this.logger.info(str);
     }
 
     /**
      * Debug log
-     * @param str
+     * @param {string} str
      */
-    debug (str) {
-        const me = this;
-
-        me.logger.debug(str);
+    debug(str) {
+        this.logger.debug(str);
     }
 }
-
 
 module.exports = ApplicationLogger;

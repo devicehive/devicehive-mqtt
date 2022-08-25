@@ -1,7 +1,7 @@
 const CONST = require(`../constants.json`);
 const Config = require(`../../config`).test.integration;
 const mqtt = require(`mqtt`);
-const EventEmitter = require('events');
+const EventEmitter = require("events");
 const randomString = require(`randomstring`);
 const chai = require(`chai`);
 const expect = chai.expect;
@@ -21,15 +21,16 @@ const REFRESH_TOPIC = `${CONST.DH_RESPONSE_TOPIC}/${REFRESH_ACTION}`;
 const TEST_PAYLOAD = {
     userId: Config.TEST_USER_ID,
     networkIds: [Config.NETWORK_ID],
-    deviceTypeIds: [Config.DEVICE_TYPE_ID]
+    deviceTypeIds: [Config.DEVICE_TYPE_ID],
 };
-let mqttClient, accessToken, refreshToken;
+let mqttClient;
+let refreshToken;
 
 it(`should connect to MQTT broker`, () => {
     return new Promise((resolve) => {
         mqttClient = mqtt.connect(Config.MQTT_BROKER_URL, {
             username: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
+            password: Config.TEST_PASSWORD,
         });
 
         mqttClient.on(`message`, (topic, message) => {
@@ -38,7 +39,7 @@ it(`should connect to MQTT broker`, () => {
             ee.emit(messageObject.requestId, messageObject);
         });
 
-        mqttClient.on('connect', () => {
+        mqttClient.on("connect", () => {
             resolve();
         });
     });
@@ -46,37 +47,46 @@ it(`should connect to MQTT broker`, () => {
 
 it(`should subscribe for "${TOKEN_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${TOKEN_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${TOKEN_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${CREATE_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${CREATE_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${CREATE_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
 it(`should subscribe for "${REFRESH_TOPIC}" topic`, () => {
     return new Promise((resolve, reject) => {
-        mqttClient.subscribe(`${REFRESH_TOPIC}@${mqttClient.options.clientId}`, (err) => {
-            if (err) {
-                reject();
-            } else {
-                resolve();
+        mqttClient.subscribe(
+            `${REFRESH_TOPIC}@${mqttClient.options.clientId}`,
+            (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 });
 
@@ -88,18 +98,20 @@ it(`should create access and refresh tokens by login: "${Config.TEST_LOGIN}" and
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message).to.include.all.keys(`accessToken`, `refreshToken`);
 
-            accessToken = message.accessToken;
             refreshToken = message.refreshToken;
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: TOKEN_ACTION,
-            requestId: requestId,
-            login: Config.TEST_LOGIN,
-            password: Config.TEST_PASSWORD
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: TOKEN_ACTION,
+                requestId: requestId,
+                login: Config.TEST_LOGIN,
+                password: Config.TEST_PASSWORD,
+            })
+        );
     });
 });
 
@@ -111,17 +123,19 @@ it(`should create access and refresh tokens by payload`, () => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message).to.include.all.keys(`accessToken`, `refreshToken`);
 
-            accessToken = message.accessToken;
             refreshToken = message.refreshToken;
 
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: CREATE_ACTION,
-            requestId: requestId,
-            payload: TEST_PAYLOAD
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: CREATE_ACTION,
+                requestId: requestId,
+                payload: TEST_PAYLOAD,
+            })
+        );
     });
 });
 
@@ -133,19 +147,19 @@ it(`should refresh access token by refresh token.`, () => {
             expect(message.status).to.equal(CONST.SUCCESS_STATUS);
             expect(message).to.include.all.keys(`accessToken`);
 
-            accessToken = message.accessToken;
-
             resolve();
         });
 
-        mqttClient.publish(CONST.DH_REQUEST_TOPIC, JSON.stringify({
-            action: REFRESH_ACTION,
-            requestId: requestId,
-            refreshToken: refreshToken
-        }));
+        mqttClient.publish(
+            CONST.DH_REQUEST_TOPIC,
+            JSON.stringify({
+                action: REFRESH_ACTION,
+                requestId: requestId,
+                refreshToken: refreshToken,
+            })
+        );
     });
 });
-
 
 it(`should disconnect from MQTT broker`, () => {
     return new Promise((resolve) => {
