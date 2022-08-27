@@ -8,7 +8,7 @@ stage('Build and publish Docker image in CI repository') {
   node('docker') {
     checkout scm
     echo 'Building image ...'
-    def mqtt = docker.build('devicehiveci/devicehive-mqtt:${BRANCH_NAME}', '--pull -f Dockerfile .')
+    def mqtt = docker.build("devicehiveci/devicehive-mqtt:${BRANCH_NAME}", '--pull -f Dockerfile .')
 
     echo 'Pushing image to CI repository ...'
     docker.withRegistry('https://registry.hub.docker.com', 'devicehiveci_dockerhub'){
